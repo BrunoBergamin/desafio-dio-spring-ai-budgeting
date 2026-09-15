@@ -20,10 +20,27 @@
         <java.version>25</java.version>
         <spring-ai.version>2.0.1</spring-ai.version>
         <springdoc.version>3.1.1</springdoc.version>
+        <swagger.version>2.2.55</swagger.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!--
+              O Spring AI traz as anotações do Swagger em versão mais antiga (via victools) e o springdoc
+              precisa da mesma versão do swagger-core. As duas variantes têm a classe
+              io.swagger.v3.oas.annotations.media.Schema, então ambas precisam ficar na mesma versão:
+              sem isso o /v3/api-docs quebra com NoSuchMethodError.
+            -->
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>

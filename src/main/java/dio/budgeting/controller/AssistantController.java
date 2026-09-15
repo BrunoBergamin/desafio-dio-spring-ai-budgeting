@@ -4,6 +4,9 @@ import dio.budgeting.dto.request.ChatRequest;
 import dio.budgeting.dto.response.AssistantResponse;
 import dio.budgeting.service.AssistantService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,18 +28,32 @@ public class AssistantController {
     private final AssistantService assistantService;
 
     @Operation(summary = "Envia um comando em texto (ex.: 'gastei 50 reais na farmácia')")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Resposta do assistente"),
+            @ApiResponse(responseCode = "400", description = "Mensagem vazia ou muito longa", content = @Content)
+    })
     @PostMapping(value = "/chat", consumes = MediaType.APPLICATION_JSON_VALUE)
     public AssistantResponse chat(@Valid @RequestBody ChatRequest request) {
         return assistantService.chat(request.message());
     }
 
     @Operation(summary = "Envia um áudio e recebe a transcrição e a resposta em texto (JSON)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Transcrição e resposta"),
+            @ApiResponse(responseCode = "413", description = "Áudio maior que 10MB", content = @Content),
+            @ApiResponse(responseCode = "422", description = "Arquivo vazio ou que não é áudio", content = @Content)
+    })
     @PostMapping(value = "/voice/text", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AssistantResponse voiceToText(@RequestParam("file") MultipartFile file) {
         return assistantService.voiceToText(file);
     }
 
     @Operation(summary = "Envia um áudio e recebe a resposta falada em MP3 (fluxo principal)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Áudio MP3 com a resposta"),
+            @ApiResponse(responseCode = "413", description = "Áudio maior que 10MB", content = @Content),
+            @ApiResponse(responseCode = "422", description = "Arquivo vazio ou que não é áudio", content = @Content)
+    })
     @PostMapping(value = "/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = "audio/mpeg")
     public ResponseEntity<Resource> voiceToVoice(@RequestParam("file") MultipartFile file) {
         var audio = assistantService.voiceToVoice(file);

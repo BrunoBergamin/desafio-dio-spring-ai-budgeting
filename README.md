@@ -21,7 +21,7 @@
 [![Linguagem principal](https://img.shields.io/github/languages/top/BrunoBergamin/desafio-dio-spring-ai-budgeting?style=flat-square)](https://github.com/BrunoBergamin/desafio-dio-spring-ai-budgeting)
 [![Tamanho do repositório](https://img.shields.io/github/repo-size/BrunoBergamin/desafio-dio-spring-ai-budgeting?style=flat-square)](https://github.com/BrunoBergamin/desafio-dio-spring-ai-budgeting)
 
-[Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura-em-camadas) · [Melhorias](#-melhorias-que-implementei) · [Como executar](#️-como-executar) · [Como testar](#-como-testar-o-fluxo-principal) · [O que aprendi](#-o-que-aprendi)
+[Fluxo](#-fluxo-principal) · [Prints](#-a-api-rodando) · [Arquitetura](#️-arquitetura-em-camadas) · [Melhorias](#-melhorias-que-implementei) · [Como executar](#️-como-executar) · [Como testar](#-como-testar-o-fluxo-principal) · [O que aprendi](#-o-que-aprendi)
 
 </div>
 
@@ -76,6 +76,32 @@ sequenceDiagram
 
 ---
 
+## 📸 A API rodando
+
+Documentação interativa em `http://localhost:8080/swagger-ui.html`, com os endpoints separados entre o assistente de IA e as transações:
+
+![Swagger UI com todos os endpoints da API](docs/images/swagger-overview.png)
+
+<details>
+<summary><b>POST /transactions — registrando um gasto (clique para ver)</b></summary>
+
+Resposta `201 Created` com o header `Location` apontando para o recurso criado:
+
+![POST /transactions executado no Swagger, com resposta 201](docs/images/swagger-post-transaction.png)
+
+</details>
+
+<details>
+<summary><b>GET /transactions/summary — resumo por categoria (clique para ver)</b></summary>
+
+Total do mês, quantidade de lançamentos e o percentual de cada categoria:
+
+![GET /transactions/summary executado no Swagger, com resposta 200](docs/images/swagger-summary.png)
+
+</details>
+
+---
+
 ## 🏗️ Arquitetura em camadas
 
 ```
@@ -120,6 +146,7 @@ src/main/java/dio/budgeting
 | 8 | **Endpoints de IA para testar sem ouvir áudio**: `POST /assistant/chat` (texto → texto) e `POST /assistant/voice/text` (áudio → transcrição + resposta em JSON), além do fluxo original áudio → MP3. Validação do arquivo enviado (vazio / não é áudio). | `AssistantController`, `AssistantService` |
 | 9 | **Auditoria por log**: cada chamada de ferramenta, transcrição, pergunta e resposta da IA é registrada no log, e a entidade guarda `createdAt`/`updatedAt`. | `TransactionTools`, `AssistantService`, `Transaction` |
 | 10 | **Testes automatizados** dos principais fluxos (22 testes sem custo + 3 de ponta a ponta com OpenAI). | `src/test` |
+| 12 | **Códigos de resposta documentados** no Swagger (201, 400, 404, 413, 422) com `@ApiResponse`, em vez do genérico "200 OK". | `TransactionController`, `AssistantController` |
 | 11 | **Roda sem Docker**: H2 em memória por padrão; MySQL continua disponível pelo perfil `mysql`. Documentação interativa com **Swagger UI**. | `application*.properties` |
 
 ---
