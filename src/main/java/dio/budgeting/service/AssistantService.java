@@ -2,10 +2,12 @@ package dio.budgeting.service;
 
 import dio.budgeting.dto.response.AssistantResponse;
 import dio.budgeting.exception.BusinessException;
+import dio.budgeting.exception.FeatureUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.audio.transcription.TranscriptionModel;
 import org.springframework.ai.audio.tts.TextToSpeechModel;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -27,12 +29,16 @@ public class AssistantService {
 
     private final ChatClient chatClient;
     private final TranscriptionModel transcriptionModel;
-    private final TextToSpeechModel textToSpeechModel;
+    private final ObjectProvider<TextToSpeechModel> textToSpeechModel;
     private final Resource systemPrompt;
 
+    /**
+     * O text-to-speech é opcional: perfis sem um provedor de voz (ex.: groq) continuam
+     * atendendo as rotas de texto, em vez de impedir a aplicação de subir.
+     */
     public AssistantService(ChatClient chatClient,
                             TranscriptionModel transcriptionModel,
-                            TextToSpeechModel textToSpeechModel,
+                            ObjectProvider<TextToSpeechModel> textToSpeechModel,
                             @Value("classpath:prompts/system-message.st") Resource systemPrompt) {
         this.chatClient = chatClient;
         this.transcriptionModel = transcriptionModel;
@@ -53,8 +59,13 @@ public class AssistantService {
 
     /** Áudio -> resposta em áudio MP3 (fluxo principal do desafio). */
     public byte[] voiceToVoice(MultipartFile audio) {
+        var speech = textToSpeechModel.getIfAvailable();
+        if (speech == null) {
+            throw new FeatureUnavailableException(
+                    "a resposta em áudio não está habilitada neste perfil; use /assistant/voice/text");
+        }
         var answer = voiceToText(audio).answer();
-        return textToSpeechModel.call(answer);
+        return speech.call(answer);
     }
 
     private String transcribe(MultipartFile audio) {
