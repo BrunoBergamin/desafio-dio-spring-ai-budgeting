@@ -1,0 +1,74 @@
+### Requisições prontas para o IntelliJ (HTTP Client) ou VS Code (extensão REST Client)
+@base = http://localhost:8080
+
+### Registrar gasto
+POST {{base}}/transactions
+Content-Type: application/json
+
+{
+  "description": "Compras no mercado",
+  "amount": 80.50,
+  "category": "GROCERIES"
+}
+
+### Registrar gasto inválido (400 com erros por campo)
+POST {{base}}/transactions
+Content-Type: application/json
+
+{
+  "description": "",
+  "amount": -5,
+  "date": "2099-01-01"
+}
+
+### Listar todos
+GET {{base}}/transactions
+
+### Filtrar por categoria e período
+GET {{base}}/transactions?category=GROCERIES&start=2026-09-01&end=2026-09-30
+
+### Resumo do mês atual
+GET {{base}}/transactions/summary
+
+### Resumo de um período
+GET {{base}}/transactions/summary?start=2026-09-01&end=2026-09-30
+
+### Assistente por texto (precisa de OPENAI_API_KEY)
+POST {{base}}/assistant/chat
+Content-Type: application/json
+
+{
+  "message": "Gastei 42 reais e 90 centavos na farmácia"
+}
+
+### Pergunta ao assistente
+POST {{base}}/assistant/chat
+Content-Type: application/json
+
+{
+  "message": "Quanto eu gastei este mês e em qual categoria gastei mais?"
+}
+
+### Áudio -> transcrição + resposta em JSON
+POST {{base}}/assistant/voice/text
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="recording-1.m4a"
+Content-Type: audio/m4a
+
+< ./src/test/resources/audio/recording-1.m4a
+--boundary--
+
+### Áudio -> resposta em áudio MP3 (fluxo principal)
+POST {{base}}/assistant/voice
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="recording-1.m4a"
+Content-Type: audio/m4a
+
+< ./src/test/resources/audio/recording-1.m4a
+--boundary--
+
+>> resposta.mp3
