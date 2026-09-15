@@ -25,6 +25,11 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT, "Regra de negócio violada", ex.getMessage());
     }
 
+    @ExceptionHandler(FeatureUnavailableException.class)
+    ProblemDetail handleFeatureUnavailable(FeatureUnavailableException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Recurso indisponível", ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new LinkedHashMap<>();

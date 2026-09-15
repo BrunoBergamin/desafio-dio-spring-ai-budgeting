@@ -13,7 +13,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-22%20passando-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-27%20passando-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -145,7 +145,8 @@ src/main/java/dio/budgeting
 | 7 | **Endpoints REST completos**: CRUD (`GET/PUT/DELETE /transactions/{id}`), `201 Created` com header `Location`, e erros padronizados com **ProblemDetail (RFC 9457)**: 400 com erros por campo, 404, 422 para regra de negócio, 413 para áudio grande. | `TransactionController`, `GlobalExceptionHandler` |
 | 8 | **Endpoints de IA para testar sem ouvir áudio**: `POST /assistant/chat` (texto → texto) e `POST /assistant/voice/text` (áudio → transcrição + resposta em JSON), além do fluxo original áudio → MP3. Validação do arquivo enviado (vazio / não é áudio). | `AssistantController`, `AssistantService` |
 | 9 | **Auditoria por log**: cada chamada de ferramenta, transcrição, pergunta e resposta da IA é registrada no log, e a entidade guarda `createdAt`/`updatedAt`. | `TransactionTools`, `AssistantService`, `Transaction` |
-| 10 | **Testes automatizados** dos principais fluxos (22 testes sem custo + 3 de ponta a ponta com OpenAI). | `src/test` |
+| 10 | **Testes automatizados** dos principais fluxos (27 testes sem custo + testes de ponta a ponta com a IA real). | `src/test` |
+| 13 | **Perfil gratuito alternativo (`groq`)**: a mesma aplicação roda com a API da Groq, sem custo. Como a Groq não oferece geração de voz, o `TextToSpeechModel` virou opcional e a rota de áudio responde `503` com uma mensagem clara, em vez de quebrar. | `application-groq.properties`, `AssistantService` |
 | 12 | **Códigos de resposta documentados** no Swagger (201, 400, 404, 413, 422) com `@ApiResponse`, em vez do genérico "200 OK". | `TransactionController`, `AssistantController` |
 | 11 | **Roda sem Docker**: H2 em memória por padrão; MySQL continua disponível pelo perfil `mysql`. Documentação interativa com **Swagger UI**. | `application*.properties` |
 
@@ -186,6 +187,13 @@ $env:OPENAI_API_KEY="sk-..."
 ```bash
 ./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
 ```
+
+Sem chave da OpenAI? Use o **perfil gratuito** com a [Groq](https://console.groq.com/keys) (API compatível, chave gratuita):
+```bash
+export GROQ_API_KEY="gsk_..."
+./mvnw spring-boot:run -Dspring-boot.run.profiles=groq
+```
+Nesse perfil funcionam `/assistant/chat` e `/assistant/voice/text`. A resposta falada em MP3 só existe no perfil padrão (OpenAI), porque a Groq não oferece text-to-speech gratuito; a rota `/assistant/voice` responde `503` explicando isso.
 
 Com MySQL (precisa do Docker rodando, o Spring sobe o `compose.yml` sozinho):
 ```bash
@@ -307,9 +315,11 @@ Categorias: `GROCERIES`, `PHARMA`, `AUTO`, `RESTAURANT`, `TRANSPORT`, `HOUSING`,
 | `TransactionRepositoryTest` | `@DataJpaTest` (H2) | consulta agregada por categoria, filtros e ordenação |
 | `TransactionToolsTest` | Unitário | as 4 ferramentas estão expostas ao modelo, conversão de datas, erro legível para a IA |
 | `BudgetingApplicationTests` | `@SpringBootTest` | contexto sobe |
+| `AssistantControllerTest` | `@WebMvcTest` | resposta do assistente, 400 para mensagem vazia, 422 para arquivo que não é áudio, 503 quando a voz está desligada |
+| `AssistantFlowGroqIT` | Ponta a ponta (Groq, grátis) | mesmo fluxo no perfil sem custo, e a mensagem correta quando o MP3 não está disponível |
 | `AssistantFlowIT` | Ponta a ponta (OpenAI real) | texto cria transação na categoria certa; sem valor **não** salva; áudio → banco → MP3 |
 
-Resultado local: **22 testes passando**; os 3 do `AssistantFlowIT` rodam no `./mvnw verify` e só executam quando `OPENAI_API_KEY` está definida (evita custo e falha no CI).
+Resultado local: **27 testes passando** sem gastar nada. Os testes de ponta a ponta rodam no `./mvnw verify` e só executam quando a chave correspondente existe: `AssistantFlowIT` com `OPENAI_API_KEY`, `AssistantFlowGroqIT` com `GROQ_API_KEY`. Assim ninguém é surpreendido por custo nem por falha no CI.
 
 ---
 
