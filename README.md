@@ -1,6 +1,38 @@
+<div align="center">
+
 # 💰 Assistente de Orçamento com Spring AI
 
+**Fale quanto gastou. A IA registra no banco e responde em áudio.**
+
+[![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/25/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring AI](https://img.shields.io/badge/Spring%20AI-2.0-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](https://docs.spring.io/spring-ai/reference/)
+[![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-gpt--4o--mini%20%7C%20whisper-412991?style=for-the-badge&logo=openai&logoColor=white)](https://platform.openai.com/docs/models)
+
+[![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
+[![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
+[![Testes](https://img.shields.io/badge/testes-22%20passando-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
+
+[![Último commit](https://img.shields.io/github/last-commit/BrunoBergamin/desafio-dio-spring-ai-budgeting?style=flat-square)](https://github.com/BrunoBergamin/desafio-dio-spring-ai-budgeting/commits/main)
+[![Linguagem principal](https://img.shields.io/github/languages/top/BrunoBergamin/desafio-dio-spring-ai-budgeting?style=flat-square)](https://github.com/BrunoBergamin/desafio-dio-spring-ai-budgeting)
+[![Tamanho do repositório](https://img.shields.io/github/repo-size/BrunoBergamin/desafio-dio-spring-ai-budgeting?style=flat-square)](https://github.com/BrunoBergamin/desafio-dio-spring-ai-budgeting)
+
+[Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura-em-camadas) · [Melhorias](#-melhorias-que-implementei) · [Como executar](#️-como-executar) · [Como testar](#-como-testar-o-fluxo-principal) · [O que aprendi](#-o-que-aprendi)
+
+</div>
+
+---
+
 API REST de controle de gastos em que você **fala** o que gastou ("gastei 80 reais no mercado") e a IA registra a transação no banco e responde **em áudio**. Também dá para perguntar ("quanto gastei este mês?") e receber um resumo por categoria.
+
+```
+🎙️  "Gastei 80 reais no mercado"  →  🤖 Whisper + gpt-4o-mini + Tool Calling  →  💾 banco
+                                                                              →  🔊 "Registrei oitenta reais em mercado."
+```
 
 Projeto desenvolvido no **Desafio de Projeto DIO + Itaú**, evoluindo o projeto final do módulo [05-spring-ai](https://github.com/digitalinnovationone/dio-spring-boot-learning-track/tree/main/05-spring-ai) do expert Poiani.
 
