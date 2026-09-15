@@ -38,6 +38,21 @@ Projeto desenvolvido no **Desafio de Projeto DIO + Itaú**, evoluindo o projeto 
 
 ---
 
+## ✅ O que a entrega cobre
+
+| O que o desafio pede | Resposta curta | Onde ver |
+|---|---|---|
+| **O que o projeto faz** | Recebe um comando de voz ou texto sobre gastos, a IA entende a intenção, executa uma função real da aplicação e responde em linguagem natural (em áudio, no perfil OpenAI). | [Fluxo](#-fluxo-principal) |
+| **Como executar** | `./mvnw spring-boot:run`, com a chave no `.env`. Roda sem Docker (H2 em memória). | [Como executar](#️-como-executar) |
+| **Qual melhoria implementei** | 13 melhorias sobre o projeto base, com destaque para validações que valem também no caminho da IA, novas consultas e ferramentas, correção do bug de centavos e um perfil gratuito de execução. | [Melhorias](#-melhorias-que-implementei) |
+| **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Maven, JPA, H2/MySQL, Swagger, JUnit 5. | [Tecnologias](#️-tecnologias) |
+| **Como testar o fluxo principal** | Um comando `curl` ou o Swagger UI, com áudios de exemplo já no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
+| **O que aprendi** | Seis lições, incluindo um bug ainda aberto do Spring AI que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
+
+> **Rodei de verdade, sem pagar nada.** Usei a camada gratuita da [Groq](https://console.groq.com) (API compatível com a da OpenAI) para percorrer o fluxo inteiro: áudio → transcrição → Tool Calling → banco → resposta. Os prints e os exemplos deste README são respostas reais da aplicação, não exemplos inventados.
+
+---
+
 ## 🔄 Fluxo principal
 
 ```mermaid
@@ -81,6 +96,10 @@ sequenceDiagram
 Documentação interativa em `http://localhost:8080/swagger-ui.html`, com os endpoints separados entre o assistente de IA e as transações:
 
 ![Swagger UI com todos os endpoints da API](docs/images/swagger-overview.png)
+
+O fluxo principal do desafio, com **resposta real da IA**: o áudio foi transcrito, o modelo escolheu a ferramenta, a transação foi gravada no banco e a resposta voltou em linguagem natural.
+
+![POST /assistant/voice/text executado no Swagger, com a transcrição e a resposta da IA](docs/images/assistant-voice-text.png)
 
 <details>
 <summary><b>POST /transactions — registrando um gasto (clique para ver)</b></summary>
@@ -146,6 +165,7 @@ src/main/java/dio/budgeting
 | 8 | **Endpoints de IA para testar sem ouvir áudio**: `POST /assistant/chat` (texto → texto) e `POST /assistant/voice/text` (áudio → transcrição + resposta em JSON), além do fluxo original áudio → MP3. Validação do arquivo enviado (vazio / não é áudio). | `AssistantController`, `AssistantService` |
 | 9 | **Auditoria por log**: cada chamada de ferramenta, transcrição, pergunta e resposta da IA é registrada no log, e a entidade guarda `createdAt`/`updatedAt`. | `TransactionTools`, `AssistantService`, `Transaction` |
 | 10 | **Testes automatizados** dos principais fluxos (27 testes sem custo + testes de ponta a ponta com a IA real). | `src/test` |
+| 14 | **Contorno de um bug aberto do Spring AI**: com modelos de raciocínio da Groq, o Tool Calling quebrava na segunda chamada (`HTTP 400: property 'reasoning_content' is unsupported`). Resolvi desligando o raciocínio pela configuração, com o link da issue no arquivo. | `application-groq.properties` |
 | 13 | **Perfil gratuito alternativo (`groq`)**: a mesma aplicação roda com a API da Groq, sem custo. Como a Groq não oferece geração de voz, o `TextToSpeechModel` virou opcional e a rota de áudio responde `503` com uma mensagem clara, em vez de quebrar. | `application-groq.properties`, `AssistantService` |
 | 12 | **Códigos de resposta documentados** no Swagger (201, 400, 404, 413, 422) com `@ApiResponse`, em vez do genérico "200 OK". | `TransactionController`, `AssistantController` |
 | 11 | **Roda sem Docker**: H2 em memória por padrão; MySQL continua disponível pelo perfil `mysql`. Documentação interativa com **Swagger UI**. | `application*.properties` |
@@ -169,17 +189,24 @@ src/main/java/dio/budgeting
 
 ### Pré-requisitos
 - JDK 25 (com `JAVA_HOME` apontando para ele)
-- Uma chave da OpenAI (só para os endpoints `/assistant/**`; o CRUD funciona sem ela)
+- Uma chave de IA, só para os endpoints `/assistant/**` (o CRUD funciona sem ela). São duas opções:
+  - **Groq — gratuita**, em https://console.groq.com/keys. Faz tudo, menos a resposta falada em MP3.
+  - **OpenAI — paga** (crédito mínimo de 5 dólares), em https://platform.openai.com/api-keys. Fluxo completo, incluindo o áudio de resposta.
 
-### 1. Defina a chave da OpenAI
+### 1. Informe a chave
 
-Linux/macOS/Git Bash:
-```bash
-export OPENAI_API_KEY="sk-..."
+Copie o arquivo `.env.example` para `.env` na raiz do projeto e preencha a chave que você tiver:
+
+```properties
+GROQ_API_KEY=gsk_sua_chave_aqui
+# ou
+OPENAI_API_KEY=sk-sua_chave_aqui
 ```
-PowerShell:
-```powershell
-$env:OPENAI_API_KEY="sk-..."
+
+O `.env` está no `.gitignore` e nunca vai para o GitHub. Se preferir, use variáveis de ambiente — elas têm prioridade sobre o arquivo:
+
+```bash
+export GROQ_API_KEY="gsk_..."        # PowerShell: $env:GROQ_API_KEY="gsk_..."
 ```
 
 ### 2. Suba a aplicação
@@ -188,12 +215,11 @@ $env:OPENAI_API_KEY="sk-..."
 ./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
 ```
 
-Sem chave da OpenAI? Use o **perfil gratuito** com a [Groq](https://console.groq.com/keys) (API compatível, chave gratuita):
+Com a chave gratuita da Groq, use o **perfil `groq`**:
 ```bash
-export GROQ_API_KEY="gsk_..."
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=groq
 ```
-Nesse perfil funcionam `/assistant/chat` e `/assistant/voice/text`. A resposta falada em MP3 só existe no perfil padrão (OpenAI), porque a Groq não oferece text-to-speech gratuito; a rota `/assistant/voice` responde `503` explicando isso.
+Ele usa `whisper-large-v3-turbo` para transcrever e `openai/gpt-oss-120b` para o Tool Calling. Funcionam `/assistant/chat` e `/assistant/voice/text`; a resposta falada em MP3 existe só no perfil padrão (OpenAI), porque a Groq não oferece text-to-speech gratuito — a rota `/assistant/voice` responde `503` explicando isso. **Nenhuma linha de código Java muda entre os dois perfis, só configuração.**
 
 Com MySQL (precisa do Docker rodando, o Spring sobe o `compose.yml` sozinho):
 ```bash
@@ -226,11 +252,11 @@ Abra o `resposta.mp3` para ouvir a confirmação.
 curl -X POST http://localhost:8080/assistant/voice/text \
   -F "file=@src/test/resources/audio/recording-1.m4a"
 ```
-Formato da resposta (o texto exato varia conforme o modelo):
+Resposta real obtida com o áudio `recording-3.m4a` (o texto varia conforme o modelo):
 ```json
 {
-  "transcription": "Gastei 80 reais no mercado.",
-  "answer": "Registrei oitenta reais em mercado."
+  "transcription": "Pediu um delivery agora e a conta deu 120 reais com a taxa.",
+  "answer": "Delivery de cento e vinte reais registrado. Mais alguma coisa?"
 }
 ```
 
@@ -319,7 +345,7 @@ Categorias: `GROCERIES`, `PHARMA`, `AUTO`, `RESTAURANT`, `TRANSPORT`, `HOUSING`,
 | `AssistantFlowGroqIT` | Ponta a ponta (Groq, grátis) | mesmo fluxo no perfil sem custo, e a mensagem correta quando o MP3 não está disponível |
 | `AssistantFlowIT` | Ponta a ponta (OpenAI real) | texto cria transação na categoria certa; sem valor **não** salva; áudio → banco → MP3 |
 
-Resultado local: **27 testes passando** sem gastar nada. Os testes de ponta a ponta rodam no `./mvnw verify` e só executam quando a chave correspondente existe: `AssistantFlowIT` com `OPENAI_API_KEY`, `AssistantFlowGroqIT` com `GROQ_API_KEY`. Assim ninguém é surpreendido por custo nem por falha no CI.
+Resultado local: **27 testes passando** sem gastar nada, mais os **3 testes de ponta a ponta do `AssistantFlowGroqIT` executados de verdade contra a IA**, no plano gratuito da Groq (`BUILD SUCCESS` no `./mvnw verify`). Os testes de ponta a ponta rodam no `./mvnw verify` e só executam quando a chave correspondente existe: `AssistantFlowIT` com `OPENAI_API_KEY`, `AssistantFlowGroqIT` com `GROQ_API_KEY`. Assim ninguém é surpreendido por custo nem por falha no CI.
 
 ---
 
@@ -330,6 +356,8 @@ Resultado local: **27 testes passando** sem gastar nada. Os testes de ponta a po
 - **Erros viram contexto para o modelo.** Se a ferramenta lança exceção com mensagem clara ("o valor deve ser maior que zero"), o Spring AI devolve essa mensagem ao LLM e ele explica o problema à pessoa em linguagem natural.
 - **Prompt é configuração.** Passar a data de hoje, proibir valores inventados e pedir frases curtas (porque vão virar áudio) mudou muito a qualidade das respostas.
 - **Dinheiro é `BigDecimal`.** O bug de centavos do projeto base mostrou por que não usar `double`/`long` sem cuidado.
+- **Trocar de provedor é configuração, não código.** A mesma aplicação roda na OpenAI ou na Groq mudando só a `base-url` e o nome do modelo. Isso só é possível porque a IA está isolada em um service e em uma classe de ferramentas.
+- **Biblioteca nova tem bug, e faz parte.** O Tool Calling na Groq quebrava com `property 'reasoning_content' is unsupported`. Era um bug aberto do Spring AI ([issue #6968](https://github.com/spring-projects/spring-ai/issues/6968)), não erro meu. Achei a causa lendo o log, confirmei na issue e contornei com `spring.ai.openai.chat.extra-body.reasoning_format=hidden`. Também tive um conflito de versão do Swagger que o Maven resolve diferente do Gradle. Ler a mensagem de erro inteira resolveu os dois.
 - **Testar IA tem camadas:** a maior parte (service, controller, repository, tools) é testável sem chamar a OpenAI; só o fluxo de ponta a ponta precisa da chave.
 
 ---
