@@ -122,3 +122,20 @@ Content-Type: audio/m4a
 
 < ./src/test/resources/audio/recording-1.m4a
 --boundary--
+
+### Vincular o WhatsApp à conta
+PUT {{base}}/auth/me/phone
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "phone": "(19) 99999-9999"
+}
+
+### Estado da conexão com o WhatsApp (perfil whatsapp)
+GET {{base}}/whatsapp/status
+Authorization: Bearer {{token}}
+
+### Gerar o QR code para parear (perfil whatsapp)
+POST {{base}}/whatsapp/connect
+Authorization: Bearer {{token}}

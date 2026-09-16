@@ -23,7 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     /** Rotas do React: precisam ser publicas para o index.html carregar antes do login. */
-    static final String[] SPA_ROUTES = {"/", "/index.html", "/login", "/cadastro", "/conversa", "/transacoes", "/orcamentos"};
+    static final String[] SPA_ROUTES = {"/", "/index.html", "/login", "/cadastro", "/conversa", "/transacoes", "/orcamentos", "/whatsapp"};
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder,
@@ -34,6 +34,8 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                        // O webhook da Evolution nao tem JWT: e protegido pelo segredo na URL
+                        .requestMatchers(HttpMethod.POST, "/api/whatsapp/webhook/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()

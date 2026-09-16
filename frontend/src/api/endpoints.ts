@@ -1,7 +1,7 @@
 import { api } from './client';
 import type {
   AssistantResponse, AuthResponse, BudgetStatusResponse, Category,
-  SpendingSummary, TransactionRequest, TransactionResponse, UserResponse,
+  SpendingSummary, TransactionRequest, TransactionResponse, UserResponse, WhatsAppConnection,
 } from './types';
 
 export const authApi = {
@@ -10,6 +10,12 @@ export const authApi = {
   login: (email: string, password: string) =>
     api.post<AuthResponse>('/auth/login', { email, password }).then((r) => r.data),
   me: () => api.get<UserResponse>('/auth/me').then((r) => r.data),
+  linkPhone: (phone: string) => api.put<UserResponse>('/auth/me/phone', { phone }).then((r) => r.data),
+};
+
+export const whatsappApi = {
+  status: () => api.get<WhatsAppConnection>('/whatsapp/status').then((r) => r.data),
+  connect: () => api.post<WhatsAppConnection>('/whatsapp/connect').then((r) => r.data),
 };
 
 export const transactionsApi = {

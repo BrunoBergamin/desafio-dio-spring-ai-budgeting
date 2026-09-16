@@ -21,11 +21,11 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-93%20unit%C3%A1rios%20%2B%209%20com%20IA%20real-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-106%20unit%C3%A1rios%20%2B%209%20com%20IA%20real-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
-[Rodar com Docker](#-rodando-com-um-comando-docker) · [Prints](#-a-aplicação-rodando) · [Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura) · [Decisões](#-decisões-de-arquitetura) · [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) · [Rodar sem Docker](#️-rodando-sem-docker) · [Endpoints](#endpoints) · [Testes](#-testes-automatizados) · [O que aprendi](#-o-que-aprendi)
+[Rodar com Docker](#-rodando-com-um-comando-docker) · [WhatsApp](#-falando-com-a-lumi-pelo-whatsapp) · [Prints](#-a-aplicação-rodando) · [Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura) · [Decisões](#-decisões-de-arquitetura) · [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) · [Rodar sem Docker](#️-rodando-sem-docker) · [Endpoints](#endpoints) · [Testes](#-testes-automatizados) · [O que aprendi](#-o-que-aprendi)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 **Controle Financeiro** é um aplicativo de gastos pessoais em que você **fala** o que gastou ("gastei 80 reais no mercado") e a **Lumi**, a assistente de IA, entende, registra no banco, confere o seu orçamento do mês e responde em linguagem natural (em áudio, no perfil OpenAI). Também dá para perguntar ("quanto gastei este mês?", "e o de ontem?") e definir limites ("meu limite de mercado é 800").
 
-Nasceu como entrega do **Desafio de Projeto DIO + Itaú**, evoluindo o projeto final do módulo [05-spring-ai](https://github.com/digitalinnovationone/dio-spring-boot-learning-track/tree/main/05-spring-ai) do expert Poiani, e cresceu até virar um projeto completo: **API com JWT e multiusuário, memória de conversa, orçamento com alertas, frontend React que grava a voz pelo navegador, migrations, CI e Docker**.
+Nasceu como entrega do **Desafio de Projeto DIO + Itaú**, evoluindo o projeto final do módulo [05-spring-ai](https://github.com/digitalinnovationone/dio-spring-boot-learning-track/tree/main/05-spring-ai) do expert Poiani, e cresceu até virar um projeto completo: **API com JWT e multiusuário, memória de conversa, orçamento com alertas, frontend React que grava a voz pelo navegador, atendimento pelo WhatsApp, migrations, CI e Docker**.
 
 ```
 🎙️  você: "Gastei 85 reais no mercado hoje"
@@ -54,10 +54,10 @@ Nasceu como entrega do **Desafio de Projeto DIO + Itaú**, evoluindo o projeto f
 |---|---|---|
 | **O que o projeto faz** | Recebe comando de voz ou texto; a Lumi entende a intenção, executa uma função real (Tool Calling), grava ou consulta no banco e responde. | [Fluxo](#-fluxo-principal) |
 | **Como executar** | `docker compose up --build` (um comando) ou `./mvnw spring-boot:run`. Sem instalar nada além do Docker. | [Rodar](#-rodando-com-um-comando-docker) |
-| **Qual melhoria implementei** | 20 evoluções sobre o projeto base, de validação no caminho da IA até login com JWT e frontend. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
+| **Qual melhoria implementei** | 22 evoluções sobre o projeto base, de validação no caminho da IA até login com JWT e frontend. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Spring Security 7, JPA + Flyway, React 19, Docker, GitHub Actions. | [Tecnologias](#️-tecnologias) |
 | **Como testar o fluxo principal** | Pelo navegador (botão do microfone), pelo Swagger ou por `curl`, com áudios de exemplo no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
-| **O que aprendi** | Doze lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
+| **O que aprendi** | Treze lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
 
 ---
 
@@ -77,6 +77,25 @@ Abra **http://localhost:8080**, crie uma conta e fale com a Lumi. O Swagger fica
 - A chave da Groq é gratuita: crie em https://console.groq.com/keys (sem cartão).
 - Quer MySQL em vez do H2 em memória? `SPRING_PROFILES_ACTIVE=groq,mysql` no `.env` e `docker compose --profile mysql up --build`.
 - A imagem final roda como usuário sem privilégio (`lumi`), tem `HEALTHCHECK` e pesa ~800 MB (JRE 25 + Ubuntu; um `alpine` reduziria, mas priorizei previsibilidade).
+
+---
+
+## 💬 Falando com a Lumi pelo WhatsApp
+
+A mesma Lumi atende pelo WhatsApp: você manda um áudio ou um texto e ela registra o gasto, avisa do orçamento e responde por lá. A integração usa a [Evolution API](https://github.com/EvolutionAPI/evolution-api) (perfil `whatsapp`), que roda **junto no `docker compose`**: a Evolution chama a aplicação pela rede interna, então **não precisa de ngrok nem de servidor público**.
+
+```bash
+# .env: SPRING_PROFILES_ACTIVE=groq,whatsapp  +  EVOLUTION_API_KEY  +  WHATSAPP_WEBHOOK_SECRET
+docker compose --profile whatsapp up --build
+```
+
+1. Abra a página **WhatsApp** do site, clique em **Gerar QR code** e escaneie com o celular (WhatsApp → Aparelhos conectados). Use um chip que não seja o seu pessoal.
+2. Ainda na página, **vincule o seu número** à conta. Número desconhecido recebe só um convite para se cadastrar: a Lumi nunca registra gasto de quem ela não conhece.
+3. Mande "gastei 30 reais na farmácia" (texto ou áudio) para o número conectado.
+
+Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento `messages.upsert`, responde `202` na hora e processa em segundo plano (`@Async`); o áudio chega em base64 (`ogg/opus`, aceito direto pelo Whisper); o número vira o usuário pela tabela `users.phone`; a resposta volta por `POST /message/sendText` (e em áudio, no perfil OpenAI). A conversa do WhatsApp tem memória própria, separada da do site. O provedor fica atrás da interface `WhatsAppGateway`: trocar a Evolution pela **API oficial da Meta** é escrever outra implementação, e mais nada.
+
+> **Escolha consciente:** a Evolution não é a API oficial (usa o WhatsApp Web por baixo) e a Meta pode bloquear o número. Para demonstração e portfólio ela é imbatível: grátis, local, sem cadastro de empresa. Para produção, a implementação oficial entra no lugar sem mexer no resto.
 
 ---
 
@@ -220,7 +239,9 @@ Outras decisões: `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o **mesmo S
 | 17 | **Áudio em formato inesperado vira 422 explicado** (o Gravador do Windows salva AAC cru como `.m4a`). Descoberto testando com a minha voz. | `AssistantService` |
 | 18 | **Erros padronizados** com `ProblemDetail` em toda a API, inclusive 401/403 da camada de segurança. | `GlobalExceptionHandler`, `ProblemDetailResponses` |
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
-| 20 | **102 testes** (unitários, `@WebMvcTest` com segurança real, `@DataJpaTest` com Flyway, ponta a ponta com IA). | `src/test` |
+| 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, vínculo número → conta, áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
+| 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. Sem migration: a coluna já era texto. | `Category` |
+| 20 | **106 testes** (unitários, `@WebMvcTest` com segurança real, `@DataJpaTest` com Flyway, ponta a ponta com IA). | `src/test` |
 
 ---
 
@@ -318,15 +339,18 @@ Resposta real do passo 3 (o texto varia conforme o modelo):
 | POST | `/api/assistant/voice/text` | Áudio → transcrição + resposta JSON |
 | POST | `/api/assistant/voice` | Áudio → resposta MP3 (503 no perfil groq) |
 | DELETE | `/api/assistant/conversation` | Apaga o histórico da conversa |
+| PUT | `/api/auth/me/phone` | Vincula o número do WhatsApp à conta |
+| GET/POST | `/api/whatsapp/status` · `/api/whatsapp/connect` | Estado da conexão · QR code para parear (perfil `whatsapp`) |
+| POST | `/api/whatsapp/webhook/{segredo}` | Chamado pela Evolution a cada mensagem (público, protegido pelo segredo) |
 
-Categorias: `GROCERIES`, `PHARMA`, `AUTO`, `RESTAURANT`, `TRANSPORT`, `HOUSING`, `LEISURE`, `EDUCATION`, `OTHER`. Ferramentas que a Lumi conhece: `registrar_transacao`, `listar_transacoes`, `ultimas_transacoes`, `resumo_de_gastos`, `definir_orcamento`, `consultar_orcamentos`, `status_do_orcamento`, `alertas_de_orcamento`.
+Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`, `SUBSCRIPTIONS`, `CLOTHING`, `PERSONAL_CARE`, `LEISURE`, `EDUCATION`, `PETS`, `TRAVEL`, `GIFTS`, `TAXES`, `OTHER`. Ferramentas que a Lumi conhece: `registrar_transacao`, `listar_transacoes`, `ultimas_transacoes`, `resumo_de_gastos`, `definir_orcamento`, `consultar_orcamentos`, `status_do_orcamento`, `alertas_de_orcamento`.
 
 ---
 
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 93 testes sem custo (unitários, WebMvc com segurança real, JPA sobre as migrations)
+./mvnw test      # 106 testes sem custo (unitários, WebMvc com segurança real, JPA sobre as migrations)
 ./mvnw verify    # + 9 de ponta a ponta com a IA (só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir)
 ```
 
@@ -337,10 +361,11 @@ Categorias: `GROCERIES`, `PHARMA`, `AUTO`, `RESTAURANT`, `TRANSPORT`, `HOUSING`,
 | `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, formatos de áudio, TTS desligado |
 | `TransactionToolsTest`, `BudgetToolsTest` | Unitário | ferramentas expostas, **`userId` fora do schema**, `userId` falso do modelo ignorado, fail-fast sem contexto |
 | `AuthControllerTest`, `TransactionControllerTest`, `BudgetControllerTest`, `AssistantControllerTest` | `@WebMvcTest` + `SecurityConfig` real | 401 com `ProblemDetail`, 201/400/404/422/503, validação por campo |
+| `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | ignora mensagens próprias/grupos, extrai número (inclusive com LID), número não vinculado só recebe convite, áudio em base64 vai para o Whisper, segredo errado → 404 |
 | `TransactionRepositoryTest`, `UserAndBudgetRepositoryTest` | `@DataJpaTest` + Flyway | isolamento por usuário nas queries, agregações, `UNIQUE` de e-mail e de orçamento |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **93 passando** sem chave; **102 passando** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
+Resultado local: **106 passando** sem chave; **115 passando** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
 
 ---
 
@@ -367,6 +392,8 @@ Resultado local: **93 passando** sem chave; **102 passando** com a chave da Groq
 - **SQL portátil tem limite.** `VARCHAR(36)` e `TIMESTAMP(6)` rodam em H2 e MySQL; `DATETIME` e "tornar coluna `NOT NULL`" não. Descobri testando as migrations no próprio build.
 
 - **Biblioteca nova tem bug, e faz parte.** O Tool Calling na Groq quebrava por um bug aberto do Spring AI ([#6968](https://github.com/spring-projects/spring-ai/issues/6968)); o Swagger quebrava por um conflito de versões que o Maven resolve diferente do Gradle. Ler o log até o fim resolveu os dois.
+
+- **WhatsApp é só mais uma porta.** Como a Lumi vive no service, atender pelo WhatsApp foi um webhook, um cliente HTTP e uma tabela de números: o núcleo não mudou. E o formato do WhatsApp (`ogg/opus`) é aceito pelo Whisper sem conversão, ao contrário do Gravador do Windows.
 
 - **Testar com a minha própria voz achou bug.** O Gravador do Windows salva um `.m4a` que não é m4a; a API dava 500. Virou uma mensagem explicando o que fazer, e o frontend gravando em `webm` eliminou o problema de vez.
 

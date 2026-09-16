@@ -24,7 +24,7 @@ public class BudgetTools {
 
     @Tool(name = "definir_orcamento", description = "Define ou atualiza o limite mensal de gastos de uma categoria")
     public BudgetStatusResponse defineBudget(
-            @ToolParam(description = "Categoria do orçamento") Category category,
+            @ToolParam(description = "Categoria do orçamento. Guia: " + Category.GUIDE) Category category,
             @ToolParam(description = "Limite mensal em reais, ex.: 800.00") BigDecimal monthlyLimit,
             @ToolParam(description = "Mês no formato AAAA-MM. Omita para o mês atual", required = false) String month,
             ToolContext toolContext) {

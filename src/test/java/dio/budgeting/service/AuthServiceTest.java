@@ -18,6 +18,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,6 +72,26 @@ class AuthServiceTest {
         assertThatThrownBy(() -> service.login(new LoginRequest("bruno@email.com", "errada")))
                 .isInstanceOf(InvalidCredentialsException.class);
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void should_normalizeBrazilianPhone_when_linking() {
+        assertThat(AuthService.normalizePhone("(19) 99999-9999")).isEqualTo("5519999999999");
+        assertThat(AuthService.normalizePhone("+55 19 99999-9999")).isEqualTo("5519999999999");
+        assertThat(AuthService.normalizePhone("1933334444")).isEqualTo("551933334444");
+        assertThatThrownBy(() -> AuthService.normalizePhone("123")).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void should_rejectPhone_when_alreadyLinkedToAnotherAccount() {
+        var me = UUID.randomUUID();
+        var other = new User("Outra", "outra@email.com", "hash");
+        org.springframework.test.util.ReflectionTestUtils.setField(other, "id", UUID.randomUUID());
+        when(userRepository.findByPhone("5519999999999")).thenReturn(Optional.of(other));
+
+        assertThatThrownBy(() -> service.linkPhone(me, "19 99999-9999"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("outra conta");
     }
 
     @Test

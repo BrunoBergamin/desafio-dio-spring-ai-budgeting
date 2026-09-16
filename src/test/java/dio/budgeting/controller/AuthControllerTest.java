@@ -41,7 +41,7 @@ class AuthControllerTest {
     @Test
     void should_return201WithToken_when_registrationIsValid() throws Exception {
         when(authService.register(any())).thenReturn(AuthResponse.bearer("token-jwt", 28800,
-                new UserResponse(UUID.fromString(USER_ID), "Bruno", "bruno@email.com")));
+                new UserResponse(UUID.fromString(USER_ID), "Bruno", "bruno@email.com", null)));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +102,7 @@ class AuthControllerTest {
     @WithMockUser(username = USER_ID)
     void should_returnCurrentUser_when_authenticated() throws Exception {
         when(authService.me(UUID.fromString(USER_ID)))
-                .thenReturn(new UserResponse(UUID.fromString(USER_ID), "Bruno", "bruno@email.com"));
+                .thenReturn(new UserResponse(UUID.fromString(USER_ID), "Bruno", "bruno@email.com", null));
 
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isOk())

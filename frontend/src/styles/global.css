@@ -154,3 +154,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .table th, .table td { padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
 .table th { color: var(--text-2); font-weight: 500; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .table tbody tr:hover { background: var(--surface-2); }
+
+/* ---------- whatsapp ---------- */
+.qr { display: block; width: 260px; max-width: 100%; border-radius: 12px; background: #fff; padding: 8px; margin: 0.5rem 0; }
+code { background: var(--surface-2); padding: 0.1rem 0.35rem; border-radius: 6px; font-size: 0.9em; }

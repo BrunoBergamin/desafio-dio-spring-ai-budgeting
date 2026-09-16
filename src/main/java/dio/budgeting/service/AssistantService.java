@@ -7,9 +7,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.audio.transcription.TranscriptionModel;
 import org.springframework.ai.audio.tts.TextToSpeechModel;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -60,6 +63,32 @@ public class AssistantService {
         return speech.call(answer);
     }
 
+    /**
+     * Áudio que não veio por upload HTTP (ex.: WhatsApp): bytes + nome com extensão + content-type.
+     * O nome importa: o serviço de transcrição decide o formato pela extensão.
+     */
+    public record AudioInput(byte[] bytes, String filename, String contentType) {
+    }
+
+    public AssistantResponse voiceToText(UUID userId, String conversationId, AudioInput audio) {
+        var resource = new ByteArrayResource(audio.bytes()) {
+            @Override
+            public String getFilename() {
+                return audio.filename();
+            }
+        };
+        var slug = ConversationKey.slug(conversationId);
+        var transcription = transcribe(resource, audio.contentType());
+        var answer = lumiChat.answer(userId, ConversationKey.of(userId, slug), transcription);
+        return new AssistantResponse(transcription, answer, slug);
+    }
+
+    /** Converte a resposta em MP3 quando o perfil tem text-to-speech; vazio quando não tem. */
+    public Optional<byte[]> speak(String text) {
+        var speech = textToSpeechModel.getIfAvailable();
+        return speech == null ? Optional.empty() : Optional.of(speech.call(text));
+    }
+
     /** Apaga o histórico da conversa (botão "nova conversa"). */
     public void forget(UUID userId, String conversationId) {
         lumiChat.forget(ConversationKey.of(userId, ConversationKey.slug(conversationId)));
@@ -69,7 +98,10 @@ public class AssistantService {
         if (audio == null || audio.isEmpty()) {
             throw new BusinessException("envie um arquivo de áudio no campo 'file'");
         }
-        var contentType = audio.getContentType();
+        return transcribe(audio.getResource(), audio.getContentType());
+    }
+
+    private String transcribe(Resource audio, String contentType) {
         if (contentType != null && !contentType.startsWith("audio/") && !contentType.startsWith("video/")
                 && !contentType.equals("application/octet-stream")) {
             throw new BusinessException("o arquivo enviado não é um áudio (%s)".formatted(contentType));
@@ -77,7 +109,7 @@ public class AssistantService {
 
         String transcription;
         try {
-            transcription = transcriptionModel.transcribe(audio.getResource());
+            transcription = transcriptionModel.transcribe(audio);
         } catch (RuntimeException e) {
             if (isUnsupportedAudio(e)) {
                 // Acontece, por exemplo, com gravações do Windows salvas como AAC cru dentro de um .m4a

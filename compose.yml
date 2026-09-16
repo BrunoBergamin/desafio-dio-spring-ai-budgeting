@@ -4,6 +4,7 @@
 #
 # Banco padrao: H2 em memoria. Para MySQL:  docker compose --profile mysql up --build
 # (com SPRING_PROFILES_ACTIVE=groq,mysql no .env)
+# WhatsApp pela Evolution API:  docker compose --profile whatsapp up --build  (SPRING_PROFILES_ACTIVE=groq,whatsapp)
 services:
   app:
     build: .
@@ -19,6 +20,11 @@ services:
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       # Dentro da rede do compose o host do MySQL e "database" na porta 3306 (a 3307 so existe no host)
       DB_URL: jdbc:mysql://database:3306/transaction?useSSL=false&allowPublicKeyRetrieval=true
+      # WhatsApp (perfil whatsapp): a Evolution fala com a app pela rede interna, sem ngrok
+      EVOLUTION_URL: http://evolution:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET:-}
+      WHATSAPP_WEBHOOK_URL: http://app:8080/api/whatsapp/webhook/${WHATSAPP_WEBHOOK_SECRET:-}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
       interval: 15s
@@ -45,5 +51,57 @@ services:
       timeout: 5s
       retries: 10
 
+  # ---------- WhatsApp via Evolution API (opcional). Ative com --profile whatsapp ----------
+  # Nao e a API oficial da Meta: usa o WhatsApp Web por baixo. Use um numero que nao seja o seu pessoal.
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    profiles: ["whatsapp"]
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8080"          # painel/API da Evolution no host (opcional)
+    environment:
+      SERVER_URL: http://localhost:8081
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY no .env}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@evolution-postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: lumi
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_DATA_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      DATABASE_SAVE_DATA_LABELS: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+      CONFIG_SESSION_PHONE_CLIENT: Lumi
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: "30"
+      LOG_LEVEL: ERROR,WARN
+    volumes:
+      - evolution_instances:/evolution/instances
+
+  evolution-postgres:
+    image: postgres:16-alpine
+    profiles: ["whatsapp"]
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+    volumes:
+      - evolution_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   transaction_data:
+  evolution_instances:
+  evolution_data:
