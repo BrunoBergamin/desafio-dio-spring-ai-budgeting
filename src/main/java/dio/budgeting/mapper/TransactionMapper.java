@@ -3,6 +3,7 @@ package dio.budgeting.mapper;
 import dio.budgeting.dto.request.TransactionRequest;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Transaction;
+import dio.budgeting.entity.User;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -10,8 +11,9 @@ import java.time.LocalDate;
 @Component
 public class TransactionMapper {
 
-    public Transaction toEntity(TransactionRequest request) {
+    public Transaction toEntity(User owner, TransactionRequest request) {
         return new Transaction(
+                owner,
                 request.description(),
                 request.amount(),
                 request.category(),

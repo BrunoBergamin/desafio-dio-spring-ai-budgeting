@@ -1,7 +1,9 @@
 package dio.budgeting;
 
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.User;
 import dio.budgeting.repository.TransactionRepository;
+import dio.budgeting.repository.UserRepository;
 import dio.budgeting.service.AssistantService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,22 +26,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 @EnabledIfEnvironmentVariable(named = "OPENAI_API_KEY", matches = "sk-.+")
 class AssistantFlowIT {
 
-    @Autowired
-    AssistantService assistantService;
+    @Autowired AssistantService assistantService;
+    @Autowired TransactionRepository transactionRepository;
+    @Autowired UserRepository userRepository;
 
-    @Autowired
-    TransactionRepository transactionRepository;
+    UUID bruno;
 
     @BeforeEach
     void clean() {
         transactionRepository.deleteAll();
+        userRepository.deleteAll();
+        bruno = userRepository.save(new User("Bruno", "bruno@it.com", "hash")).getId();
+        assistantService.forget(bruno, null);
     }
 
     @Test
     void should_persistTransaction_when_textCommandIsSent() {
-        var response = assistantService.chat("Gastei 42 reais e 90 centavos na farmácia comprando remédio");
+        var response = assistantService.chat(bruno, null, "Gastei 42 reais e 90 centavos na farmácia comprando remédio");
 
-        var saved = transactionRepository.findAll();
+        var saved = transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno);
         assertThat(saved).hasSize(1);
         assertThat(saved.getFirst().getAmount()).isEqualByComparingTo("42.90");
         assertThat(saved.getFirst().getCategory()).isEqualTo(Category.PHARMA);
@@ -47,9 +53,9 @@ class AssistantFlowIT {
 
     @Test
     void should_notPersist_when_amountIsMissing() {
-        var response = assistantService.chat("Fui ao mercado hoje");
+        var response = assistantService.chat(bruno, null, "Fui ao mercado hoje");
 
-        assertThat(transactionRepository.findAll()).isEmpty();
+        assertThat(transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno)).isEmpty();
         System.out.println(response.answer());
     }
 
@@ -58,9 +64,9 @@ class AssistantFlowIT {
         var audio = new ClassPathResource("audio/recording-1.m4a");
         var file = new MockMultipartFile("file", "recording-1.m4a", "audio/m4a", audio.getInputStream());
 
-        var mp3 = assistantService.voiceToVoice(file);
+        var mp3 = assistantService.voiceToVoice(bruno, null, file);
 
-        assertThat(transactionRepository.findAll()).hasSize(1);
+        assertThat(transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno)).hasSize(1);
         assertThat(mp3).hasSizeGreaterThan(1024);
     }
 }

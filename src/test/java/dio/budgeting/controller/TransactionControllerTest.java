@@ -4,11 +4,13 @@ import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
 import dio.budgeting.exception.BusinessException;
 import dio.budgeting.exception.ResourceNotFoundException;
+import dio.budgeting.security.AppUserDetailsService;
 import dio.budgeting.service.TransactionService;
+import dio.budgeting.support.SecuredWebMvcTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,8 +26,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TransactionController.class)
+@SecuredWebMvcTest(TransactionController.class)
 class TransactionControllerTest {
+
+    static final String USER_ID = "11111111-1111-1111-1111-111111111111";
 
     @Autowired
     MockMvc mockMvc;
@@ -33,10 +37,23 @@ class TransactionControllerTest {
     @MockitoBean
     TransactionService transactionService;
 
+    @MockitoBean
+    AppUserDetailsService userDetailsService;
+
     @Test
+    void should_return401WithProblemDetail_when_tokenIsMissing() throws Exception {
+        mockMvc.perform(get("/api/transactions"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.title").value("Não autenticado"));
+
+        verifyNoInteractions(transactionService);
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
     void should_return201_when_transactionIsCreated() throws Exception {
         var id = UUID.randomUUID();
-        when(transactionService.create(any())).thenReturn(new TransactionResponse(
+        when(transactionService.create(eq(UUID.fromString(USER_ID)), any())).thenReturn(new TransactionResponse(
                 id, "Mercado", new BigDecimal("80.50"), Category.GROCERIES, "Mercado", LocalDate.of(2026, 9, 15)));
 
         mockMvc.perform(post("/api/transactions")
@@ -51,6 +68,7 @@ class TransactionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = USER_ID)
     void should_return400WithFieldErrors_when_requestIsInvalid() throws Exception {
         mockMvc.perform(post("/api/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,9 +84,11 @@ class TransactionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = USER_ID)
     void should_return404_when_transactionDoesNotExist() throws Exception {
         var id = UUID.randomUUID();
-        when(transactionService.findById(eq(id))).thenThrow(new ResourceNotFoundException("não encontrada"));
+        when(transactionService.findById(eq(UUID.fromString(USER_ID)), eq(id)))
+                .thenThrow(new ResourceNotFoundException("não encontrada"));
 
         mockMvc.perform(get("/api/transactions/{id}", id))
                 .andExpect(status().isNotFound())
@@ -76,8 +96,9 @@ class TransactionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = USER_ID)
     void should_return422_when_periodIsInvalid() throws Exception {
-        when(transactionService.summary(any(), any())).thenThrow(new BusinessException("período inválido"));
+        when(transactionService.summary(any(), any(), any())).thenThrow(new BusinessException("período inválido"));
 
         mockMvc.perform(get("/api/transactions/summary").param("start", "2026-09-10").param("end", "2026-09-01"))
                 .andExpect(status().isUnprocessableContent())
@@ -85,6 +106,7 @@ class TransactionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = USER_ID)
     void should_return400_when_bodyHasUnknownCategory() throws Exception {
         mockMvc.perform(post("/api/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,6 +118,7 @@ class TransactionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = USER_ID)
     void should_return400_when_categoryIsUnknown() throws Exception {
         mockMvc.perform(get("/api/transactions").param("category", "PIZZA"))
                 .andExpect(status().isBadRequest());

@@ -4,6 +4,7 @@ import dio.budgeting.dto.request.TransactionRequest;
 import dio.budgeting.dto.response.SpendingSummaryResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
+import dio.budgeting.security.CurrentUserProvider;
 import dio.budgeting.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,13 +23,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Transações", description = "CRUD e consultas de gastos")
+@Tag(name = "Transações", description = "CRUD e consultas de gastos do usuário autenticado")
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final CurrentUserProvider currentUser;
 
     @Operation(summary = "Registra um gasto")
     @ApiResponses({
@@ -37,7 +39,7 @@ public class TransactionController {
     })
     @PostMapping
     public ResponseEntity<TransactionResponse> create(@Valid @RequestBody TransactionRequest request) {
-        var created = transactionService.create(request);
+        var created = transactionService.create(currentUser.requireUserId(), request);
         var location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.id()).toUri();
         return ResponseEntity.created(location).body(created);
@@ -49,7 +51,7 @@ public class TransactionController {
             @RequestParam(required = false) Category category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        return transactionService.list(category, start, end);
+        return transactionService.list(currentUser.requireUserId(), category, start, end);
     }
 
     @Operation(summary = "Resumo de gastos por categoria no período (padrão: mês atual)")
@@ -61,7 +63,7 @@ public class TransactionController {
     public SpendingSummaryResponse summary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        return transactionService.summary(start, end);
+        return transactionService.summary(currentUser.requireUserId(), start, end);
     }
 
     @Operation(summary = "Busca um gasto pelo id")
@@ -71,7 +73,7 @@ public class TransactionController {
     })
     @GetMapping("/{id}")
     public TransactionResponse findById(@PathVariable UUID id) {
-        return transactionService.findById(id);
+        return transactionService.findById(currentUser.requireUserId(), id);
     }
 
     @Operation(summary = "Atualiza um gasto")
@@ -82,7 +84,7 @@ public class TransactionController {
     })
     @PutMapping("/{id}")
     public TransactionResponse update(@PathVariable UUID id, @Valid @RequestBody TransactionRequest request) {
-        return transactionService.update(id, request);
+        return transactionService.update(currentUser.requireUserId(), id, request);
     }
 
     @Operation(summary = "Remove um gasto")
@@ -93,6 +95,6 @@ public class TransactionController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
-        transactionService.delete(id);
+        transactionService.delete(currentUser.requireUserId(), id);
     }
 }
