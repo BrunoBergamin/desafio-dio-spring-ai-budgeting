@@ -1,0 +1,59 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { budgetsApi, transactionsApi } from '../api/endpoints';
+import type { Category, TransactionRequest } from '../api/types';
+import { invalidateFinancial, keys } from '../lib/queryClient';
+
+/** Hooks de dados: cada tela declara o que precisa; o React Query cuida de cache, loading e refetch. */
+
+export function useTransactions(filters: { category?: Category; start?: string; end?: string }) {
+  return useQuery({
+    queryKey: keys.transactions(filters),
+    queryFn: () => transactionsApi.list(filters),
+  });
+}
+
+export function useSummary(start?: string, end?: string) {
+  return useQuery({ queryKey: keys.summary(start, end), queryFn: () => transactionsApi.summary({ start, end }) });
+}
+
+export function useBudgets(month?: string) {
+  return useQuery({ queryKey: keys.budgets(month), queryFn: () => budgetsApi.list(month) });
+}
+
+export function useAlerts(month?: string) {
+  return useQuery({ queryKey: keys.alerts(month), queryFn: () => budgetsApi.alerts(month) });
+}
+
+export function useCreateTransaction() {
+  return useMutation({ mutationFn: (body: TransactionRequest) => transactionsApi.create(body), onSuccess: invalidateFinancial });
+}
+
+export function useUpdateTransaction() {
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: TransactionRequest }) => transactionsApi.update(id, body),
+    onSuccess: invalidateFinancial,
+  });
+}
+
+export function useDeleteTransaction() {
+  return useMutation({ mutationFn: (id: string) => transactionsApi.remove(id), onSuccess: invalidateFinancial });
+}
+
+export function useCreateBudget() {
+  return useMutation({
+    mutationFn: ({ category, monthlyLimit, month }: { category: Category; monthlyLimit: number; month?: string }) =>
+      budgetsApi.create(category, monthlyLimit, month),
+    onSuccess: invalidateFinancial,
+  });
+}
+
+export function useUpdateBudget() {
+  return useMutation({
+    mutationFn: ({ id, monthlyLimit }: { id: string; monthlyLimit: number }) => budgetsApi.update(id, monthlyLimit),
+    onSuccess: invalidateFinancial,
+  });
+}
+
+export function useDeleteBudget() {
+  return useMutation({ mutationFn: (id: string) => budgetsApi.remove(id), onSuccess: invalidateFinancial });
+}
