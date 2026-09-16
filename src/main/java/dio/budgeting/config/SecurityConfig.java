@@ -23,7 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     /** Rotas do React: precisam ser publicas para o index.html carregar antes do login. */
-    static final String[] SPA_ROUTES = {"/", "/index.html", "/login", "/cadastro", "/conversa", "/transacoes", "/orcamentos", "/whatsapp"};
+    static final String[] SPA_ROUTES = {"/", "/index.html", "/login", "/cadastro", "/painel", "/conversa", "/transacoes", "/orcamentos", "/whatsapp"};
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder,

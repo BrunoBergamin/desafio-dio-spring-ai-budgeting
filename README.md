@@ -57,7 +57,7 @@ Nasceu como entrega do **Desafio de Projeto DIO + Itaú**, evoluindo o projeto f
 | **Qual melhoria implementei** | 22 evoluções sobre o projeto base, de validação no caminho da IA até login com JWT e frontend. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Spring Security 7, JPA + Flyway, React 19, Docker, GitHub Actions. | [Tecnologias](#️-tecnologias) |
 | **Como testar o fluxo principal** | Pelo navegador (botão do microfone), pelo Swagger ou por `curl`, com áudios de exemplo no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
-| **O que aprendi** | Treze lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
+| **O que aprendi** | Quatorze lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
 
 ---
 
@@ -103,9 +103,23 @@ Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento
 
 ## 📸 A aplicação rodando
 
-**Frontend React**: cadastro, conversa com a Lumi (voz ou texto), gráfico do mês e alertas de orçamento em tempo real.
+**Painel**: gasto do mês com comparação ao mês anterior, maior categoria, orçamentos, gráfico por categoria e por dia, últimos lançamentos. Navegação por mês, tema escuro e claro.
 
-![Tela de conversa com a Lumi: gasto registrado, alerta de orçamento na resposta, gráfico por categoria e barra do orçamento](docs/images/ui-conversa.png)
+![Painel com indicadores do mês, gráfico por categoria, gráfico por dia, últimos lançamentos e orçamentos](docs/images/ui-painel.png)
+
+**Conversa com a Lumi**: microfone, upload de arquivo de áudio (inclusive as notas de voz `.ogg` do WhatsApp, arrastando para a tela), histórico guardado no navegador, horário em cada mensagem. Abaixo, uma frase com dois gastos e uma nota de voz enviada como arquivo:
+
+![Conversa: dois gastos numa frase, nota de voz do WhatsApp enviada como arquivo e transcrita, alerta de orçamento](docs/images/ui-conversa.png)
+
+<details>
+<summary><b>Tema claro, celular, gastos e login (clique para ver)</b></summary>
+
+![Painel no tema claro](docs/images/ui-painel-claro.png)
+![Conversa no celular, com o menu embaixo](docs/images/ui-mobile.png)
+![Gastos com navegação por mês, busca, ordenação e edição inline](docs/images/ui-gastos.png)
+![Tela de login](docs/images/ui-login.png)
+
+</details>
 
 <details>
 <summary><b>Gravando pela voz no navegador (clique para ver)</b></summary>
@@ -113,15 +127,6 @@ Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento
 O botão do microfone usa `MediaRecorder` e grava em `webm/opus`, formato aceito pelo Whisper. Abaixo, a transcrição da minha voz e a resposta com dados reais do banco:
 
 ![Áudio gravado no navegador, transcrito e respondido pela Lumi](docs/images/ui-voz.png)
-
-</details>
-
-<details>
-<summary><b>Login, gastos e orçamentos (clique para ver)</b></summary>
-
-![Tela de login](docs/images/ui-login.png)
-![Lista de gastos com filtro por categoria](docs/images/ui-gastos.png)
-![Orçamentos do mês com barra de progresso e status](docs/images/ui-orcamentos.png)
 
 </details>
 
@@ -231,7 +236,7 @@ Outras decisões: `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o **mesmo S
 | 7 | **Orçamento mensal por categoria com alertas** (OK / atenção / estourado) e 4 ferramentas novas para a Lumi. | `BudgetService`, `BudgetTools` |
 | 8 | **Alerta entregue junto do registro do gasto**, sem round-trip extra ao modelo. | `ExpenseService` |
 | 9 | **Migrations com Flyway** (3 versões, SQL portátil H2/MySQL) e `ddl-auto=validate`; os testes de repositório rodam sobre as migrations. | `db/migration`, `@JpaTest` |
-| 10 | **Frontend React 19 + Vite + TypeScript**: gravação pelo navegador (`MediaRecorder`), chat, gráfico por categoria, gastos e orçamentos; F5 em qualquer rota funciona. | `frontend/`, `SpaForwardController` |
+| 10 | **Frontend React 19 + Vite + TypeScript**: painel com indicadores e dois gráficos, chat com microfone, upload e arrastar-e-soltar de áudio (aceita as notas de voz do WhatsApp), histórico persistente, tema claro/escuro, notificações, edição inline de gastos e orçamentos, navegação por mês, layout de celular com menu inferior. Dados com React Query (cache e invalidação), 10 testes com Vitest + Testing Library. | `frontend/`, `SpaForwardController` |
 | 11 | **Docker em 3 estágios** (Node → Maven → JRE), usuário não-root, `HEALTHCHECK`, `compose` com MySQL opcional. | `Dockerfile`, `compose.yml` |
 | 12 | **CI no GitHub Actions**: backend, frontend e imagem Docker, verde sem nenhum segredo. | `.github/workflows/ci.yml` |
 | 13 | **Actuator** (`health`, `info`, `metrics`) e prefixo `/api` em todos os endpoints. | `WebMvcConfig`, `application.properties` |
@@ -254,7 +259,8 @@ Outras decisões: `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o **mesmo S
   - **Groq** (perfil `groq`, gratuito): `openai/gpt-oss-120b` + `whisper-large-v3-turbo`
   - **OpenAI** (perfil padrão): `gpt-4o-mini` + `whisper-1` + `gpt-4o-mini-tts`
 - **Flyway 12** · **H2** (padrão) e **MySQL 9** · **Lombok** · **springdoc-openapi**
-- **React 19**, **Vite 8**, **TypeScript**, `react-router`, `axios`, `recharts`, CSS puro
+- **React 19**, **Vite 8**, **TypeScript**, `react-router`, `@tanstack/react-query`, `axios`, `recharts`, CSS puro com variáveis (tema claro/escuro)
+- **Vitest + Testing Library** no frontend
 - **JUnit 5, Mockito, MockMvc, Spring Security Test, AssertJ**
 - **Maven** (wrapper) · **Docker** · **GitHub Actions**
 
@@ -280,7 +286,7 @@ Para servir o React pela própria API (como no Docker): `npm run build`, copie `
 | O quê | URL |
 |------|-----|
 | Aplicação | http://localhost:8080 (ou :5173 em dev) |
-| Swagger UI | http://localhost:8080/swagger-ui.html — botão **Authorize** com o token do `/api/auth/login` |
+| Swagger UI | http://localhost:8080/swagger-ui.html: botão **Authorize** com o token do `/api/auth/login` |
 | Health | http://localhost:8080/actuator/health |
 | Console H2 | http://localhost:8080/h2-console (`jdbc:h2:mem:budgeting`, usuário `sa`) |
 
@@ -365,9 +371,10 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 | `AuthControllerTest`, `TransactionControllerTest`, `BudgetControllerTest`, `AssistantControllerTest` | `@WebMvcTest` + `SecurityConfig` real | 401 com `ProblemDetail`, 201/400/404/422/503, validação por campo |
 | `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | ignora mensagens próprias/grupos, extrai número (inclusive com LID), número não vinculado só recebe convite, áudio em base64 vai para o Whisper, segredo errado → 404 |
 | `TransactionRepositoryTest`, `UserAndBudgetRepositoryTest` | `@DataJpaTest` + Flyway | isolamento por usuário nas queries, agregações, `UNIQUE` de e-mail e de orçamento |
+| `format.test.ts`, `BudgetBar.test.tsx`, `useChatHistory.test.tsx` (frontend, Vitest) | Componente / hook | intervalo do mês, dinheiro em pt-BR, edição inline do limite, histórico do chat por usuário sem vazar URLs de áudio |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **106 passando** sem chave; **115 passando** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
+Resultado local: **106 no backend + 10 no frontend** sem chave; **125** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
 
 ---
 
@@ -395,6 +402,8 @@ Resultado local: **106 passando** sem chave; **115 passando** com a chave da Gro
 
 - **Biblioteca nova tem bug, e faz parte.** O Tool Calling na Groq quebrava por um bug aberto do Spring AI ([#6968](https://github.com/spring-projects/spring-ai/issues/6968)); o Swagger quebrava por um conflito de versões que o Maven resolve diferente do Gradle. Ler o log até o fim resolveu os dois.
 
+- **CSS também tem armadilha.** O menu fixo do celular apareceu colado no topo em vez de no rodapé. Causa: `backdrop-filter` no cabeçalho transforma o elemento em referência para `position: fixed` dos filhos. Achei testando em viewport de 400px, não lendo documentação.
+
 - **WhatsApp é só mais uma porta.** Como a Lumi vive no service, atender pelo WhatsApp foi um webhook, um cliente HTTP e uma tabela de números: o núcleo não mudou. E o formato do WhatsApp (`ogg/opus`) é aceito pelo Whisper sem conversão, ao contrário do Gravador do Windows.
 
 - **Testar com a minha própria voz achou bug.** O Gravador do Windows salva um `.m4a` que não é m4a; a API dava 500. Virou uma mensagem explicando o que fazer, e o frontend gravando em `webm` eliminou o problema de vez.
@@ -405,6 +414,6 @@ Resultado local: **106 passando** sem chave; **115 passando** com a chave da Gro
 
 - [Trilha Spring Boot DIO](https://github.com/digitalinnovationone/dio-spring-boot-learning-track)
 - [Spring AI Reference](https://docs.spring.io/spring-ai/reference/index.html) · [ChatClient](https://docs.spring.io/spring-ai/reference/api/chatclient.html) · [Tools](https://docs.spring.io/spring-ai/reference/api/tools.html) · [Chat Memory](https://docs.spring.io/spring-ai/reference/api/chat-memory.html) · [Transcription](https://docs.spring.io/spring-ai/reference/api/audio/transcriptions.html) · [Speech](https://docs.spring.io/spring-ai/reference/api/audio/speech.html)
-- [Spring Security — OAuth2 Resource Server (JWT)](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html)
-- [Flyway](https://documentation.red-gate.com/flyway) · [RFC 9457 – Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
+- [Spring Security, OAuth2 Resource Server (JWT)](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html)
+- [Flyway](https://documentation.red-gate.com/flyway) · [RFC 9457, Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 - [MediaRecorder API](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder)

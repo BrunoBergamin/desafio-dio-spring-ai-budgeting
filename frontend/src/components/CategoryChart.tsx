@@ -1,15 +1,16 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { CategorySummary } from '../api/types';
 import { CATEGORY_COLORS, money } from '../utils/format';
+import { EmptyState } from '../ui/primitives';
 
-export function CategoryChart({ data }: { data: CategorySummary[] }) {
+export function CategoryChart({ data, height = 260 }: { data: CategorySummary[]; height?: number }) {
   if (data.length === 0) {
-    return <p className="muted">Nenhum gasto neste período ainda. Fale com a Lumi ou registre um gasto.</p>;
+    return <EmptyState icon="📭" title="Nenhum gasto neste período" hint="Fale com a Lumi ou registre um gasto para o gráfico aparecer." />;
   }
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={height}>
       <PieChart>
-        <Pie data={data} dataKey="total" nameKey="categoryLabel" innerRadius={62} outerRadius={100} paddingAngle={2} stroke="none">
+        <Pie data={data} dataKey="total" nameKey="categoryLabel" innerRadius="58%" outerRadius="88%" paddingAngle={2} stroke="none">
           {data.map((entry) => (
             <Cell key={entry.category} fill={CATEGORY_COLORS[entry.category]} />
           ))}

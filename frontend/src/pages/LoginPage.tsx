@@ -12,7 +12,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/conversa" replace />;
+  if (user) return <Navigate to="/painel" replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -20,7 +20,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      navigate((location.state as { from?: string } | null)?.from ?? '/conversa', { replace: true });
+      navigate((location.state as { from?: string } | null)?.from ?? '/painel', { replace: true });
     } catch (err) {
       setError(errorMessage(err, 'Não foi possível entrar.'));
     } finally {
@@ -30,15 +30,21 @@ export function LoginPage() {
 
   return (
     <div className="auth-screen">
+      <div className="auth-hero">
+        <span className="brand-dot big" />
+        <h1>Lumi</h1>
+        <p className="muted">sua assistente de gastos por voz</p>
+        <ul className="auth-points">
+          <li>🎙️ fale o gasto, ela registra</li>
+          <li>🎯 avisa quando o orçamento aperta</li>
+          <li>💬 responde pelo site ou pelo WhatsApp</li>
+        </ul>
+      </div>
       <form className="card auth-card" onSubmit={submit}>
-        <div className="auth-brand">
-          <span className="brand-dot big" />
-          <h1>Lumi</h1>
-          <p className="muted">sua assistente de gastos por voz</p>
-        </div>
+        <h2>Entrar</h2>
         <label>
           E-mail
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoFocus />
         </label>
         <label>
           Senha
