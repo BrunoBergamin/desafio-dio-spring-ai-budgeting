@@ -2,7 +2,7 @@
 @base = http://localhost:8080
 
 ### Registrar gasto
-POST {{base}}/transactions
+POST {{base}}/api/transactions
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 }
 
 ### Registrar gasto inválido (400 com erros por campo)
-POST {{base}}/transactions
+POST {{base}}/api/transactions
 Content-Type: application/json
 
 {
@@ -22,19 +22,19 @@ Content-Type: application/json
 }
 
 ### Listar todos
-GET {{base}}/transactions
+GET {{base}}/api/transactions
 
 ### Filtrar por categoria e período
-GET {{base}}/transactions?category=GROCERIES&start=2026-09-01&end=2026-09-30
+GET {{base}}/api/transactions?category=GROCERIES&start=2026-09-01&end=2026-09-30
 
 ### Resumo do mês atual
-GET {{base}}/transactions/summary
+GET {{base}}/api/transactions/summary
 
 ### Resumo de um período
-GET {{base}}/transactions/summary?start=2026-09-01&end=2026-09-30
+GET {{base}}/api/transactions/summary?start=2026-09-01&end=2026-09-30
 
 ### Assistente por texto (precisa de OPENAI_API_KEY)
-POST {{base}}/assistant/chat
+POST {{base}}/api/assistant/chat
 Content-Type: application/json
 
 {
@@ -42,7 +42,7 @@ Content-Type: application/json
 }
 
 ### Pergunta ao assistente
-POST {{base}}/assistant/chat
+POST {{base}}/api/assistant/chat
 Content-Type: application/json
 
 {
@@ -50,7 +50,7 @@ Content-Type: application/json
 }
 
 ### Áudio -> transcrição + resposta em JSON
-POST {{base}}/assistant/voice/text
+POST {{base}}/api/assistant/voice/text
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
@@ -61,7 +61,7 @@ Content-Type: audio/m4a
 --boundary--
 
 ### Áudio -> resposta em áudio MP3 (fluxo principal)
-POST {{base}}/assistant/voice
+POST {{base}}/api/assistant/voice
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
