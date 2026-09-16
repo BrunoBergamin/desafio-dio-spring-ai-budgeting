@@ -11,8 +11,8 @@ public class OpenApiConfig {
     @Bean
     OpenAPI budgetingOpenApi() {
         return new OpenAPI().info(new Info()
-                .title("Budgeting API - Assistente de Orçamento com Spring AI")
-                .description("Registre e consulte gastos por REST, texto ou comando de voz.")
+                .title("Controle Financeiro - API da assistente Lumi")
+                .description("Registre e consulte seus gastos por REST, por texto ou falando com a Lumi.")
                 .version("1.0.0"));
     }
 }
