@@ -1,6 +1,27 @@
+# Sobe a aplicação inteira com um comando: docker compose up
+#
+# A chave da IA sai do arquivo .env (copie o .env.example). Sem chave, o CRUD e o Swagger
+# funcionam normalmente; só os endpoints /assistant/** precisam dela.
+#
+# Banco: H2 em memória (padrão). Para usar MySQL:  docker compose --profile mysql up
 services:
+  app:
+    build: .
+    container_name: controle-financeiro
+    ports:
+      - "8080:8080"
+    environment:
+      # Perfil da IA: use "groq" (gratuito) ou deixe vazio para o padrão (OpenAI)
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Dentro do container não existe Docker para o compose do MySQL
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+
+  # Opcional: banco MySQL, no lugar do H2. Ative com --profile mysql
   database:
     image: mysql:9.6
+    profiles: ["mysql"]
     environment:
       MYSQL_DATABASE: transaction
       MYSQL_ROOT_PASSWORD: root
@@ -11,7 +32,7 @@ services:
     volumes:
       - transaction_data:/var/lib/mysql
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uapp", "-papp" ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uapp", "-papp"]
       interval: 5s
       timeout: 5s
       retries: 5
