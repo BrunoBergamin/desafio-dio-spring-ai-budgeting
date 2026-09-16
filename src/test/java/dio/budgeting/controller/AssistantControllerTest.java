@@ -33,7 +33,7 @@ class AssistantControllerTest {
         when(assistantService.chat("Gastei 80 reais no mercado"))
                 .thenReturn(new AssistantResponse(null, "Registrei oitenta reais em mercado."));
 
-        mockMvc.perform(post("/assistant/chat")
+        mockMvc.perform(post("/api/assistant/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"message": "Gastei 80 reais no mercado"}
@@ -44,7 +44,7 @@ class AssistantControllerTest {
 
     @Test
     void should_return400_when_messageIsBlank() throws Exception {
-        mockMvc.perform(post("/assistant/chat")
+        mockMvc.perform(post("/api/assistant/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"message": "  "}
@@ -58,7 +58,7 @@ class AssistantControllerTest {
         when(assistantService.voiceToText(any()))
                 .thenReturn(new AssistantResponse("Gastei 80 reais no mercado.", "Registrei oitenta reais em mercado."));
 
-        mockMvc.perform(multipart("/assistant/voice/text").file(audioFile()))
+        mockMvc.perform(multipart("/api/assistant/voice/text").file(audioFile()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.transcription").value("Gastei 80 reais no mercado."));
     }
@@ -68,7 +68,7 @@ class AssistantControllerTest {
         when(assistantService.voiceToText(any()))
                 .thenThrow(new BusinessException("o arquivo enviado não é um áudio (text/plain)"));
 
-        mockMvc.perform(multipart("/assistant/voice/text").file(audioFile()))
+        mockMvc.perform(multipart("/api/assistant/voice/text").file(audioFile()))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.title").value("Regra de negócio violada"));
     }
@@ -78,7 +78,7 @@ class AssistantControllerTest {
         when(assistantService.voiceToVoice(any()))
                 .thenThrow(new FeatureUnavailableException("a resposta em áudio não está habilitada neste perfil"));
 
-        mockMvc.perform(multipart("/assistant/voice").file(audioFile()))
+        mockMvc.perform(multipart("/api/assistant/voice").file(audioFile()))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.title").value("Recurso indisponível"));
     }

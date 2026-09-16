@@ -39,20 +39,20 @@ class TransactionControllerTest {
         when(transactionService.create(any())).thenReturn(new TransactionResponse(
                 id, "Mercado", new BigDecimal("80.50"), Category.GROCERIES, "Mercado", LocalDate.of(2026, 9, 15)));
 
-        mockMvc.perform(post("/transactions")
+        mockMvc.perform(post("/api/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"description": "Mercado", "amount": 80.50, "category": "GROCERIES"}
                                 """))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "http://localhost/transactions/" + id))
+                .andExpect(header().string("Location", "http://localhost/api/transactions/" + id))
                 .andExpect(jsonPath("$.amount").value(80.50))
                 .andExpect(jsonPath("$.categoryLabel").value("Mercado"));
     }
 
     @Test
     void should_return400WithFieldErrors_when_requestIsInvalid() throws Exception {
-        mockMvc.perform(post("/transactions")
+        mockMvc.perform(post("/api/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"description": "", "amount": 0}
@@ -70,7 +70,7 @@ class TransactionControllerTest {
         var id = UUID.randomUUID();
         when(transactionService.findById(eq(id))).thenThrow(new ResourceNotFoundException("não encontrada"));
 
-        mockMvc.perform(get("/transactions/{id}", id))
+        mockMvc.perform(get("/api/transactions/{id}", id))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Recurso não encontrado"));
     }
@@ -79,14 +79,14 @@ class TransactionControllerTest {
     void should_return422_when_periodIsInvalid() throws Exception {
         when(transactionService.summary(any(), any())).thenThrow(new BusinessException("período inválido"));
 
-        mockMvc.perform(get("/transactions/summary").param("start", "2026-09-10").param("end", "2026-09-01"))
+        mockMvc.perform(get("/api/transactions/summary").param("start", "2026-09-10").param("end", "2026-09-01"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.detail").value("período inválido"));
     }
 
     @Test
     void should_return400_when_bodyHasUnknownCategory() throws Exception {
-        mockMvc.perform(post("/transactions")
+        mockMvc.perform(post("/api/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"description": "Pizza", "amount": 50, "category": "PIZZA"}
@@ -97,7 +97,7 @@ class TransactionControllerTest {
 
     @Test
     void should_return400_when_categoryIsUnknown() throws Exception {
-        mockMvc.perform(get("/transactions").param("category", "PIZZA"))
+        mockMvc.perform(get("/api/transactions").param("category", "PIZZA"))
                 .andExpect(status().isBadRequest());
     }
 }
