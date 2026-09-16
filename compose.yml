@@ -1,24 +1,32 @@
-# Sobe a aplicação inteira com um comando: docker compose up
+# Sobe a aplicacao inteira (API + frontend) com um comando:
+#   cp .env.example .env   (preencha a chave da IA e o segredo do JWT)
+#   docker compose up --build
 #
-# A chave da IA sai do arquivo .env (copie o .env.example). Sem chave, o CRUD e o Swagger
-# funcionam normalmente; só os endpoints /assistant/** precisam dela.
-#
-# Banco: H2 em memória (padrão). Para usar MySQL:  docker compose --profile mysql up
+# Banco padrao: H2 em memoria. Para MySQL:  docker compose --profile mysql up --build
+# (com SPRING_PROFILES_ACTIVE=groq,mysql no .env)
 services:
   app:
     build: .
-    container_name: controle-financeiro
+    container_name: lumi
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
-      # Perfil da IA: use "groq" (gratuito) ou deixe vazio para o padrão (OpenAI)
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-groq}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      # Dentro do container não existe Docker para o compose do MySQL
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?defina APP_JWT_SECRET no .env (minimo 32 caracteres)}
+      # Dentro do container nao existe Docker para o Spring subir o MySQL sozinho
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # Dentro da rede do compose o host do MySQL e "database" na porta 3306 (a 3307 so existe no host)
+      DB_URL: jdbc:mysql://database:3306/transaction?useSSL=false&allowPublicKeyRetrieval=true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
+      start_period: 45s
 
-  # Opcional: banco MySQL, no lugar do H2. Ative com --profile mysql
+  # Opcional: MySQL no lugar do H2. Ative com --profile mysql
   database:
     image: mysql:9.6
     profiles: ["mysql"]
@@ -35,7 +43,7 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uapp", "-papp"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
 volumes:
   transaction_data:

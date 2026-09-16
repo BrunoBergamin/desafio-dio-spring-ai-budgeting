@@ -1,8 +1,34 @@
 ### Requisições prontas para o IntelliJ (HTTP Client) ou VS Code (extensão REST Client)
-@base = http://localhost:8080
+### Ordem: registrar (ou logar) -> copiar o token na variável abaixo -> usar o resto
+@base = http://localhost:8080/api
+@token = COLE_AQUI_O_TOKEN
+
+### Criar conta (já devolve o token)
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Bruno",
+  "email": "bruno@email.com",
+  "password": "senha-forte-123"
+}
+
+### Login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "bruno@email.com",
+  "password": "senha-forte-123"
+}
+
+### Quem sou eu
+GET {{base}}/auth/me
+Authorization: Bearer {{token}}
 
 ### Registrar gasto
-POST {{base}}/api/transactions
+POST {{base}}/transactions
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -12,7 +38,8 @@ Content-Type: application/json
 }
 
 ### Registrar gasto inválido (400 com erros por campo)
-POST {{base}}/api/transactions
+POST {{base}}/transactions
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -21,36 +48,60 @@ Content-Type: application/json
   "date": "2099-01-01"
 }
 
-### Listar todos
-GET {{base}}/api/transactions
-
-### Filtrar por categoria e período
-GET {{base}}/api/transactions?category=GROCERIES&start=2026-09-01&end=2026-09-30
+### Listar (filtros opcionais)
+GET {{base}}/transactions?category=GROCERIES&start=2026-09-01&end=2026-09-30
+Authorization: Bearer {{token}}
 
 ### Resumo do mês atual
-GET {{base}}/api/transactions/summary
+GET {{base}}/transactions/summary
+Authorization: Bearer {{token}}
 
-### Resumo de um período
-GET {{base}}/api/transactions/summary?start=2026-09-01&end=2026-09-30
-
-### Assistente por texto (precisa de OPENAI_API_KEY)
-POST {{base}}/api/assistant/chat
+### Definir limite mensal
+POST {{base}}/budgets
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "message": "Gastei 42 reais e 90 centavos na farmácia"
+  "category": "GROCERIES",
+  "monthlyLimit": 500.00,
+  "month": "2026-09"
 }
 
-### Pergunta ao assistente
-POST {{base}}/api/assistant/chat
+### Orçamentos do mês com quanto já foi gasto
+GET {{base}}/budgets
+Authorization: Bearer {{token}}
+
+### Só os alertas
+GET {{base}}/budgets/alerts
+Authorization: Bearer {{token}}
+
+### Lumi por texto
+POST {{base}}/assistant/chat
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "message": "Quanto eu gastei este mês e em qual categoria gastei mais?"
+  "message": "Gastei 42 reais e 90 centavos na farmácia",
+  "conversationId": "principal"
 }
+
+### Pergunta com memória (mesma conversa)
+POST {{base}}/assistant/chat
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "message": "Quanto foi mesmo o valor que eu acabei de falar?",
+  "conversationId": "principal"
+}
+
+### Apagar a conversa
+DELETE {{base}}/assistant/conversation?conversationId=principal
+Authorization: Bearer {{token}}
 
 ### Áudio -> transcrição + resposta em JSON
-POST {{base}}/api/assistant/voice/text
+POST {{base}}/assistant/voice/text
+Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
@@ -60,8 +111,9 @@ Content-Type: audio/m4a
 < ./src/test/resources/audio/recording-1.m4a
 --boundary--
 
-### Áudio -> resposta em áudio MP3 (fluxo principal)
-POST {{base}}/api/assistant/voice
+### Áudio -> resposta em MP3 (perfil OpenAI; 503 no groq)
+POST {{base}}/assistant/voice
+Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
@@ -70,5 +122,3 @@ Content-Type: audio/m4a
 
 < ./src/test/resources/audio/recording-1.m4a
 --boundary--
-
->> resposta.mp3
