@@ -78,13 +78,36 @@ public class AssistantService {
             throw new BusinessException("o arquivo enviado não é um áudio (%s)".formatted(contentType));
         }
 
-        var transcription = transcriptionModel.transcribe(audio.getResource());
+        String transcription;
+        try {
+            transcription = transcriptionModel.transcribe(audio.getResource());
+        } catch (RuntimeException e) {
+            if (isUnsupportedAudio(e)) {
+                // Acontece, por exemplo, com gravações do Windows salvas como AAC cru dentro de um .m4a
+                throw new BusinessException(
+                        "o formato deste áudio não é aceito pelo serviço de transcrição; "
+                                + "converta para mp3 ou wav e envie novamente");
+            }
+            throw e;
+        }
         log.info("[assistant] transcrição: '{}'", transcription);
 
         if (transcription == null || transcription.isBlank()) {
             throw new BusinessException("não foi possível entender o áudio, tente gravar novamente");
         }
         return transcription.trim();
+    }
+
+    /** O provedor responde 400 quando o arquivo não é um áudio que ele consegue decodificar. */
+    private boolean isUnsupportedAudio(RuntimeException e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            var message = t.getMessage();
+            if (message != null
+                    && (message.contains("file must be one of") || message.contains("unsupported_audio_format"))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String ask(String message) {

@@ -14,7 +14,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-27%20passando-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-33%20passando-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -45,7 +45,7 @@ Projeto desenvolvido no **Desafio de Projeto DIO + Itaú**, evoluindo o projeto 
 |---|---|---|
 | **O que o projeto faz** | Recebe um comando de voz ou texto sobre gastos, a IA entende a intenção, executa uma função real da aplicação e responde em linguagem natural (em áudio, no perfil OpenAI). | [Fluxo](#-fluxo-principal) |
 | **Como executar** | `./mvnw spring-boot:run`, com a chave no `.env`. Roda sem Docker (H2 em memória). | [Como executar](#️-como-executar) |
-| **Qual melhoria implementei** | 14 melhorias sobre o projeto base, com destaque para validações que valem também no caminho da IA, novas consultas e ferramentas, correção do bug de centavos e um perfil gratuito de execução. | [Melhorias](#-melhorias-que-implementei) |
+| **Qual melhoria implementei** | 15 melhorias sobre o projeto base, com destaque para validações que valem também no caminho da IA, novas consultas e ferramentas, correção do bug de centavos e um perfil gratuito de execução. | [Melhorias](#-melhorias-que-implementei) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Maven, JPA, H2/MySQL, Swagger, JUnit 5. | [Tecnologias](#️-tecnologias) |
 | **Como testar o fluxo principal** | Um comando `curl` ou o Swagger UI, com áudios de exemplo já no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
 | **O que aprendi** | Oito lições, incluindo um bug ainda aberto do Spring AI que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
@@ -165,10 +165,11 @@ src/main/java/dio/budgeting
 | 7 | **Endpoints REST completos**: CRUD (`GET/PUT/DELETE /transactions/{id}`), `201 Created` com header `Location`, e erros padronizados com **ProblemDetail (RFC 9457)**: 400 com erros por campo, 404, 422 para regra de negócio, 413 para áudio grande. | `TransactionController`, `GlobalExceptionHandler` |
 | 8 | **Endpoints de IA para testar sem ouvir áudio**: `POST /assistant/chat` (texto → texto) e `POST /assistant/voice/text` (áudio → transcrição + resposta em JSON), além do fluxo original áudio → MP3. Validação do arquivo enviado (vazio / não é áudio). | `AssistantController`, `AssistantService` |
 | 9 | **Auditoria por log**: cada chamada de ferramenta, transcrição, pergunta e resposta da IA é registrada no log, e a entidade guarda `createdAt`/`updatedAt`. | `TransactionTools`, `AssistantService`, `Transaction` |
-| 10 | **Testes automatizados** dos principais fluxos (27 testes sem custo + testes de ponta a ponta com a IA real). | `src/test` |
+| 10 | **Testes automatizados** dos principais fluxos (33 testes sem custo + testes de ponta a ponta com a IA real). | `src/test` |
 | 11 | **Roda sem Docker**: H2 em memória por padrão; MySQL continua disponível pelo perfil `mysql`. Documentação interativa com **Swagger UI**. | `application*.properties` |
 | 12 | **Códigos de resposta documentados** no Swagger (201, 400, 404, 413, 422) com `@ApiResponse`, em vez do genérico "200 OK". | `TransactionController`, `AssistantController` |
 | 13 | **Perfil gratuito alternativo (`groq`)**: a mesma aplicação roda com a API da Groq, sem custo. Como a Groq não oferece geração de voz, o `TextToSpeechModel` virou opcional e a rota de áudio responde `503` com uma mensagem clara, em vez de quebrar. | `application-groq.properties`, `AssistantService` |
+| 15 | **Áudio em formato inesperado vira erro explicado**: o Gravador de Voz do Windows salva AAC cru dentro de um `.m4a`, e o serviço de transcrição recusa. Em vez de `500`, a API responde `422` dizendo para converter para mp3 ou wav. Descoberto testando com a minha própria gravação. | `AssistantService#transcribe` |
 | 14 | **Contorno de um bug aberto do Spring AI**: com modelos de raciocínio da Groq, o Tool Calling quebrava na segunda chamada (`HTTP 400: property 'reasoning_content' is unsupported`). Resolvi desligando o raciocínio pela configuração, com o link da issue no arquivo. | `application-groq.properties` |
 
 ---
@@ -249,6 +250,11 @@ curl -X POST http://localhost:8080/assistant/voice \
   --output resposta.mp3
 ```
 Abra o `resposta.mp3` para ouvir a confirmação.
+
+> **Dica:** se você gravar com o Gravador de Voz do Windows, o arquivo `.m4a` pode vir como AAC cru e o serviço de transcrição recusa. A API avisa com `422`. Converta antes:
+> ```bash
+> ffmpeg -i "minha-gravacao.m4a" minha-gravacao.mp3
+> ```
 
 ### Voz → texto (para ver o que a IA entendeu)
 ```bash
@@ -344,11 +350,12 @@ Categorias: `GROCERIES`, `PHARMA`, `AUTO`, `RESTAURANT`, `TRANSPORT`, `HOUSING`,
 | `TransactionRepositoryTest` | `@DataJpaTest` (H2) | consulta agregada por categoria, filtros e ordenação |
 | `TransactionToolsTest` | Unitário | as 4 ferramentas estão expostas ao modelo, conversão de datas, erro legível para a IA |
 | `BudgetingApplicationTests` | `@SpringBootTest` | contexto sobe |
+| `AssistantServiceTest` | Unitário (Mockito) | arquivo vazio, arquivo que não é áudio, formato recusado pelo provedor, erro que não é de formato, voz desligada, transcrição vazia |
 | `AssistantControllerTest` | `@WebMvcTest` | resposta do assistente, 400 para mensagem vazia, 422 para arquivo que não é áudio, 503 quando a voz está desligada |
 | `AssistantFlowGroqIT` | Ponta a ponta (Groq, grátis) | mesmo fluxo no perfil sem custo, e a mensagem correta quando o MP3 não está disponível |
 | `AssistantFlowIT` | Ponta a ponta (OpenAI real) | texto cria transação na categoria certa; sem valor **não** salva; áudio → banco → MP3 |
 
-**Resultado local:** 27 testes passando sem custo nenhum, mais os 3 testes de ponta a ponta do `AssistantFlowGroqIT` executados de verdade contra a IA no plano gratuito da Groq — `BUILD SUCCESS` no `./mvnw verify`.
+**Resultado local:** 33 testes passando sem custo nenhum, mais os 3 testes de ponta a ponta do `AssistantFlowGroqIT` executados de verdade contra a IA no plano gratuito da Groq — `BUILD SUCCESS` no `./mvnw verify`.
 
 Cada teste de ponta a ponta só roda quando a sua chave existe (`AssistantFlowGroqIT` com `GROQ_API_KEY`, `AssistantFlowIT` com `OPENAI_API_KEY`). Assim ninguém é surpreendido por custo, e o build não falha em uma máquina sem chave.
 
