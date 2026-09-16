@@ -93,6 +93,8 @@ docker compose --profile whatsapp up --build
 2. Ainda na página, **vincule o seu número** à conta. Número desconhecido recebe só um convite para se cadastrar: a Lumi nunca registra gasto de quem ela não conhece.
 3. Mande "gastei 30 reais na farmácia" (texto ou áudio) para o número conectado.
 
+![Página WhatsApp: vincular o número e QR code gerado pela Evolution API](docs/images/ui-whatsapp.png)
+
 Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento `messages.upsert`, responde `202` na hora e processa em segundo plano (`@Async`); o áudio chega em base64 (`ogg/opus`, aceito direto pelo Whisper); o número vira o usuário pela tabela `users.phone`; a resposta volta por `POST /message/sendText` (e em áudio, no perfil OpenAI). A conversa do WhatsApp tem memória própria, separada da do site. O provedor fica atrás da interface `WhatsAppGateway`: trocar a Evolution pela **API oficial da Meta** é escrever outra implementação, e mais nada.
 
 > **Escolha consciente:** a Evolution não é a API oficial (usa o WhatsApp Web por baixo) e a Meta pode bloquear o número. Para demonstração e portfólio ela é imbatível: grátis, local, sem cadastro de empresa. Para produção, a implementação oficial entra no lugar sem mexer no resto.

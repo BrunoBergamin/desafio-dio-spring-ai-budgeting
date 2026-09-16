@@ -36,6 +36,10 @@ public class WhatsAppService {
     public void handle(Map<String, Object> payload) {
         try {
             parse(payload).ifPresent(this::reply);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            // Erro da Evolution (o caso mais comum: instancia criada mas ainda sem celular pareado)
+            log.error("[whatsapp] a Evolution recusou o envio ({}). O WhatsApp está pareado? Veja /api/whatsapp/status. Resposta: {}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("[whatsapp] falha ao processar mensagem", e);
         }
