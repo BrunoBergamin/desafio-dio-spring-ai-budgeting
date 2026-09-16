@@ -48,7 +48,7 @@ Projeto desenvolvido no **Desafio de Projeto DIO + Itaú**, evoluindo o projeto 
 | **Qual melhoria implementei** | 14 melhorias sobre o projeto base, com destaque para validações que valem também no caminho da IA, novas consultas e ferramentas, correção do bug de centavos e um perfil gratuito de execução. | [Melhorias](#-melhorias-que-implementei) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Maven, JPA, H2/MySQL, Swagger, JUnit 5. | [Tecnologias](#️-tecnologias) |
 | **Como testar o fluxo principal** | Um comando `curl` ou o Swagger UI, com áudios de exemplo já no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
-| **O que aprendi** | Seis lições, incluindo um bug ainda aberto do Spring AI que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
+| **O que aprendi** | Oito lições, incluindo um bug ainda aberto do Spring AI que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
 
 > **Rodei de verdade, sem pagar nada.** Usei a camada gratuita da [Groq](https://console.groq.com) (API compatível com a da OpenAI) para percorrer o fluxo inteiro: áudio → transcrição → Tool Calling → banco → resposta. Os prints e os exemplos deste README são respostas reais da aplicação, não exemplos inventados.
 
@@ -356,14 +356,21 @@ Cada teste de ponta a ponta só roda quando a sua chave existe (`AssistantFlowGr
 
 ## 📚 O que aprendi
 
-- **Spring AI não substitui arquitetura.** A IA é só mais uma "porta de entrada", igual ao controller. Colocando as regras no service, o mesmo código atende REST e Tool Calling.
-- **Tool Calling pula o `@Valid`.** Quando o modelo chama um `@Tool`, nenhum controller é executado, então a validação precisa estar também no service. Reaproveitar o `Validator` com as anotações do DTO evitou duplicar regra.
-- **Erros viram contexto para o modelo.** Se a ferramenta lança exceção com mensagem clara ("o valor deve ser maior que zero"), o Spring AI devolve essa mensagem ao LLM e ele explica o problema à pessoa em linguagem natural.
-- **Prompt é configuração.** Passar a data de hoje, proibir valores inventados e pedir frases curtas (porque vão virar áudio) mudou muito a qualidade das respostas.
-- **Dinheiro é `BigDecimal`.** O bug de centavos do projeto base mostrou por que não usar `double`/`long` sem cuidado.
-- **Trocar de provedor é configuração, não código.** A mesma aplicação roda na OpenAI ou na Groq mudando só a `base-url` e o nome do modelo. Isso só é possível porque a IA está isolada em um service e em uma classe de ferramentas.
-- **Biblioteca nova tem bug, e faz parte.** O Tool Calling na Groq quebrava com `property 'reasoning_content' is unsupported`. Era um bug aberto do Spring AI ([issue #6968](https://github.com/spring-projects/spring-ai/issues/6968)), não erro meu. Achei a causa lendo o log, confirmei na issue e contornei com `spring.ai.openai.chat.extra-body.reasoning_format=hidden`. Também tive um conflito de versão do Swagger que o Maven resolve diferente do Gradle. Ler a mensagem de erro inteira resolveu os dois.
-- **Testar IA tem camadas:** a maior parte (service, controller, repository, tools) é testável sem chamar a OpenAI; só o fluxo de ponta a ponta precisa da chave.
+- **IA não substitui organização de código.** No começo eu achava que a IA era o centro do projeto. Não é. Ela é só mais uma porta de entrada, igual a um endpoint REST. Quem manda continua sendo o service, e foi isso que me permitiu usar o mesmo código para o REST e para a IA.
+
+- **A IA não passa pelo `@Valid`.** Essa foi a maior surpresa. Quando o modelo chama uma ferramenta, o controller nem é executado, então toda a validação que eu tinha feito no DTO era simplesmente pulada. Se eu não tivesse validado também no service, a IA conseguiria salvar um gasto de valor negativo.
+
+- **Dar erro pode ser bom.** Quando a ferramenta lança uma exceção com uma mensagem clara, o Spring AI entrega essa mensagem para o modelo, e ele explica o problema para a pessoa em português. O erro vira conversa, não tela quebrada.
+
+- **O prompt faz muita diferença.** Só de avisar a data de hoje, proibir inventar valores e pedir frases curtas, as respostas melhoraram bastante. Antes ela chutava valor quando eu não falava o preço; depois passou a perguntar.
+
+- **Dinheiro se guarda em `BigDecimal`.** O projeto base guardava centavos e mostrava 80 reais como 8000.0. Achar esse bug me ensinou mais do que ler sobre o assunto.
+
+- **Trocar de provedor de IA foi só configuração.** Quando vi que a OpenAI era paga, apontei o projeto para a Groq, que é gratuita, e funcionou sem mudar uma linha de Java. Isso só deu certo porque a IA estava isolada em um service e em uma classe de ferramentas.
+
+- **Biblioteca nova tem bug, e isso é normal.** Meu Tool Calling quebrava com um erro estranho na Groq. Achei a causa lendo o log inteiro e descobri que era um bug do próprio Spring AI, ainda aberto no GitHub ([issue #6968](https://github.com/spring-projects/spring-ai/issues/6968)). Contornei por configuração. Antes eu assumia que o erro era sempre meu.
+
+- **Dá para testar IA sem gastar dinheiro.** Quase tudo (service, controller, repository e ferramentas) eu testei com mock, sem chamar a IA. Só o teste de ponta a ponta precisa de chave, e ele se desliga sozinho quando a chave não existe.
 
 ---
 
