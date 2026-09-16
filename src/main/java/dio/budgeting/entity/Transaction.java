@@ -40,12 +40,18 @@ public class Transaction {
     @Column(name = "transaction_date", nullable = false)
     private LocalDate date;
 
+    /** Dono do lançamento: toda consulta filtra por ele. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
     private Instant updatedAt;
 
-    public Transaction(String description, BigDecimal amount, Category category, LocalDate date) {
+    public Transaction(User user, String description, BigDecimal amount, Category category, LocalDate date) {
+        this.user = user;
         this.description = description;
         this.amount = amount;
         this.category = category;

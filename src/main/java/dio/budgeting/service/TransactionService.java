@@ -10,6 +10,7 @@ import dio.budgeting.exception.BusinessException;
 import dio.budgeting.exception.ResourceNotFoundException;
 import dio.budgeting.mapper.TransactionMapper;
 import dio.budgeting.repository.TransactionRepository;
+import dio.budgeting.repository.UserRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
@@ -24,74 +25,83 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Regras de negocio das transacoes. O {@code userId} e sempre o primeiro parametro e nao tem
+ * sobrecarga sem ele: esquecer o usuario nao compila.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
     private final TransactionMapper transactionMapper;
     private final Validator validator;
 
     @Transactional
-    public TransactionResponse create(TransactionRequest request) {
+    public TransactionResponse create(UUID userId, TransactionRequest request) {
         validate(request);
-        var saved = transactionRepository.save(transactionMapper.toEntity(request));
-        log.info("Transação criada: id={} valor={} categoria={}", saved.getId(), saved.getAmount(), saved.getCategory());
+        // O id vem de um JWT ja validado: a referencia evita um SELECT extra
+        var owner = userRepository.getReferenceById(userId);
+        var saved = transactionRepository.save(transactionMapper.toEntity(owner, request));
+        log.info("Transação criada: id={} user={} valor={} categoria={}",
+                saved.getId(), userId, saved.getAmount(), saved.getCategory());
         return transactionMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public TransactionResponse findById(UUID id) {
-        return transactionMapper.toResponse(getOrThrow(id));
+    public TransactionResponse findById(UUID userId, UUID id) {
+        return transactionMapper.toResponse(getOrThrow(userId, id));
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionResponse> list(Category category, LocalDate start, LocalDate end) {
+    public List<TransactionResponse> list(UUID userId, Category category, LocalDate start, LocalDate end) {
         List<Transaction> transactions;
         if (start != null || end != null) {
             var period = resolvePeriod(start, end);
             transactions = category == null
-                    ? transactionRepository.findAllByDateBetweenOrderByDateDesc(period.start(), period.end())
-                    : transactionRepository.findAllByCategoryAndDateBetweenOrderByDateDesc(category, period.start(), period.end());
+                    ? transactionRepository.findAllByUserIdAndDateBetweenOrderByDateDesc(userId, period.start(), period.end())
+                    : transactionRepository.findAllByUserIdAndCategoryAndDateBetweenOrderByDateDesc(
+                            userId, category, period.start(), period.end());
         } else {
             transactions = category == null
-                    ? transactionRepository.findAllByOrderByDateDescCreatedAtDesc()
-                    : transactionRepository.findAllByCategoryOrderByDateDesc(category);
+                    ? transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(userId)
+                    : transactionRepository.findAllByUserIdAndCategoryOrderByDateDesc(userId, category);
         }
         return transactions.stream().map(transactionMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionResponse> recent() {
-        return transactionRepository.findTop5ByOrderByDateDescCreatedAtDesc()
+    public List<TransactionResponse> recent(UUID userId) {
+        return transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(userId)
                 .stream().map(transactionMapper::toResponse).toList();
     }
 
     @Transactional
-    public TransactionResponse update(UUID id, TransactionRequest request) {
+    public TransactionResponse update(UUID userId, UUID id, TransactionRequest request) {
         validate(request);
-        var transaction = getOrThrow(id);
+        var transaction = getOrThrow(userId, id);
         transaction.setDescription(request.description());
         transaction.setAmount(request.amount());
         transaction.setCategory(request.category());
         if (request.date() != null) {
             transaction.setDate(request.date());
         }
-        log.info("Transação atualizada: id={}", id);
+        log.info("Transação atualizada: id={} user={}", id, userId);
         return transactionMapper.toResponse(transactionRepository.save(transaction));
     }
 
     @Transactional
-    public void delete(UUID id) {
-        transactionRepository.delete(getOrThrow(id));
-        log.info("Transação removida: id={}", id);
+    public void delete(UUID userId, UUID id) {
+        transactionRepository.delete(getOrThrow(userId, id));
+        log.info("Transação removida: id={} user={}", id, userId);
     }
 
     @Transactional(readOnly = true)
-    public SpendingSummaryResponse summary(LocalDate start, LocalDate end) {
+    public SpendingSummaryResponse summary(UUID userId, LocalDate start, LocalDate end) {
         var period = resolvePeriod(start, end);
-        var totals = transactionRepository.sumByCategoryBetween(period.start(), period.end());
+        var totals = transactionRepository.sumByCategoryBetween(userId, period.start(), period.end());
 
         var overall = totals.stream().map(t -> t.getTotal()).reduce(BigDecimal.ZERO, BigDecimal::add);
         var quantity = totals.stream().mapToLong(t -> t.getQuantity()).sum();
@@ -106,6 +116,12 @@ public class TransactionService {
                 .toList();
 
         return new SpendingSummaryResponse(period.start(), period.end(), overall, quantity, categories);
+    }
+
+    /** Total gasto pelo usuario em uma categoria dentro do periodo (usado pelo orcamento). */
+    @Transactional(readOnly = true)
+    public BigDecimal totalByCategory(UUID userId, Category category, LocalDate start, LocalDate end) {
+        return transactionRepository.sumAmountByCategory(userId, category, start, end);
     }
 
     /**
@@ -144,8 +160,9 @@ public class TransactionService {
         return part.multiply(BigDecimal.valueOf(100)).divide(whole, 1, RoundingMode.HALF_UP);
     }
 
-    private Transaction getOrThrow(UUID id) {
-        return transactionRepository.findById(id)
+    /** Transacao de outro usuario devolve 404, nao 403: nao revela que o id existe. */
+    private Transaction getOrThrow(UUID userId, UUID id) {
+        return transactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transação %s não encontrada".formatted(id)));
     }
 

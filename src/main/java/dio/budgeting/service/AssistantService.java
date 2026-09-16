@@ -6,66 +6,63 @@ import dio.budgeting.exception.FeatureUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.audio.transcription.TranscriptionModel;
 import org.springframework.ai.audio.tts.TextToSpeechModel;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
+import java.util.UUID;
 
 /**
- * Orquestra o fluxo de IA: áudio -> texto -> ChatClient (com Tool Calling) -> texto -> áudio.
+ * Orquestra o fluxo de IA: áudio -> texto -> Lumi (com Tool Calling e memória) -> texto -> áudio.
  */
 @Slf4j
 @Service
 public class AssistantService {
 
-    private static final DateTimeFormatter TODAY_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd (EEEE)", Locale.forLanguageTag("pt-BR"));
-
-    private final ChatClient chatClient;
+    private final LumiChat lumiChat;
     private final TranscriptionModel transcriptionModel;
     private final ObjectProvider<TextToSpeechModel> textToSpeechModel;
-    private final Resource systemPrompt;
 
     /**
      * O text-to-speech é opcional: perfis sem um provedor de voz (ex.: groq) continuam
      * atendendo as rotas de texto, em vez de impedir a aplicação de subir.
      */
-    public AssistantService(ChatClient chatClient,
+    public AssistantService(LumiChat lumiChat,
                             TranscriptionModel transcriptionModel,
-                            ObjectProvider<TextToSpeechModel> textToSpeechModel,
-                            @Value("classpath:prompts/system-message.st") Resource systemPrompt) {
-        this.chatClient = chatClient;
+                            ObjectProvider<TextToSpeechModel> textToSpeechModel) {
+        this.lumiChat = lumiChat;
         this.transcriptionModel = transcriptionModel;
         this.textToSpeechModel = textToSpeechModel;
-        this.systemPrompt = systemPrompt;
     }
 
     /** Texto -> resposta em texto. Útil para testar o Tool Calling sem precisar gravar áudio. */
-    public AssistantResponse chat(String message) {
-        return new AssistantResponse(null, ask(message));
+    public AssistantResponse chat(UUID userId, String conversationId, String message) {
+        var slug = ConversationKey.slug(conversationId);
+        return new AssistantResponse(null, lumiChat.answer(userId, ConversationKey.of(userId, slug), message), slug);
     }
 
     /** Áudio -> transcrição + resposta em texto. */
-    public AssistantResponse voiceToText(MultipartFile audio) {
+    public AssistantResponse voiceToText(UUID userId, String conversationId, MultipartFile audio) {
+        var slug = ConversationKey.slug(conversationId);
         var transcription = transcribe(audio);
-        return new AssistantResponse(transcription, ask(transcription));
+        var answer = lumiChat.answer(userId, ConversationKey.of(userId, slug), transcription);
+        return new AssistantResponse(transcription, answer, slug);
     }
 
     /** Áudio -> resposta em áudio MP3 (fluxo principal do desafio). */
-    public byte[] voiceToVoice(MultipartFile audio) {
+    public byte[] voiceToVoice(UUID userId, String conversationId, MultipartFile audio) {
         var speech = textToSpeechModel.getIfAvailable();
         if (speech == null) {
             throw new FeatureUnavailableException(
                     "a resposta em áudio não está habilitada neste perfil; use /assistant/voice/text");
         }
-        var answer = voiceToText(audio).answer();
+        var answer = voiceToText(userId, conversationId, audio).answer();
         return speech.call(answer);
+    }
+
+    /** Apaga o histórico da conversa (botão "nova conversa"). */
+    public void forget(UUID userId, String conversationId) {
+        lumiChat.forget(ConversationKey.of(userId, ConversationKey.slug(conversationId)));
     }
 
     private String transcribe(MultipartFile audio) {
@@ -108,15 +105,5 @@ public class AssistantService {
             }
         }
         return false;
-    }
-
-    private String ask(String message) {
-        var answer = chatClient.prompt()
-                .system(system -> system.text(systemPrompt).param("today", LocalDate.now().format(TODAY_FORMAT)))
-                .user(message)
-                .call()
-                .content();
-        log.info("[assistant] pergunta: '{}' | resposta: '{}'", message, answer);
-        return answer;
     }
 }

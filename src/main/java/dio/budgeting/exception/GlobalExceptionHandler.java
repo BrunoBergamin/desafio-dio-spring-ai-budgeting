@@ -1,6 +1,8 @@
 package dio.budgeting.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -23,6 +25,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     ProblemDetail handleBusiness(BusinessException ex) {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT, "Regra de negócio violada", ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    ProblemDetail handleInvalidCredentials(InvalidCredentialsException ex) {
+        return problem(HttpStatus.UNAUTHORIZED, "Credenciais inválidas", ex.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        return problem(HttpStatus.FORBIDDEN, "Acesso negado", ex.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
+        return problem(HttpStatus.CONFLICT, "Conflito de dados",
+                "o registro conflita com outro já existente (valor duplicado ou referência inválida)");
     }
 
     @ExceptionHandler(FeatureUnavailableException.class)
