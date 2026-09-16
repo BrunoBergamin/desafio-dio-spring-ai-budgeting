@@ -1,8 +1,10 @@
 <div align="center">
 
-# 💰 Assistente de Orçamento com Spring AI
+# 💰 Controle Financeiro
 
-**Fale quanto gastou. A IA registra no banco e responde em áudio.**
+### Conheça a **Lumi**, sua assistente de gastos por voz
+
+**Fale quanto gastou. A Lumi registra no banco e responde falando com você.**
 
 [![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/25/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -28,11 +30,16 @@
 
 ---
 
-API REST de controle de gastos em que você **fala** o que gastou ("gastei 80 reais no mercado") e a IA registra a transação no banco e responde **em áudio**. Também dá para perguntar ("quanto gastei este mês?") e receber um resumo por categoria.
+**Controle Financeiro** é uma API de controle de gastos pessoais em que você **fala** o que gastou ("gastei 80 reais no mercado") e a **Lumi**, a assistente de IA do sistema, entende, registra a transação no banco e responde **em áudio**. Também dá para perguntar ("quanto gastei este mês?") e receber um resumo por categoria.
+
+A Lumi não é uma tela de cadastro com voz por cima: ela decide qual função da aplicação executar (Tool Calling), passa pelas mesmas regras de negócio do REST e só responde com dados que realmente estão no banco.
 
 ```
-🎙️  "Gastei 80 reais no mercado"  →  🤖 Whisper + gpt-4o-mini + Tool Calling  →  💾 banco
-                                                                              →  🔊 "Registrei oitenta reais em mercado."
+🎙️  você: "Gastei 80 reais no mercado"
+     ↓  transcrição (Whisper)
+🤖  Lumi escolhe a ferramenta registrar_transacao  →  💾 banco
+     ↓
+🔊  Lumi: "Registrei oitenta reais em mercado."
 ```
 
 Projeto desenvolvido no **Desafio de Projeto DIO + Itaú**, evoluindo o projeto final do módulo [05-spring-ai](https://github.com/digitalinnovationone/dio-spring-boot-learning-track/tree/main/05-spring-ai) do expert Poiani.
@@ -43,7 +50,7 @@ Projeto desenvolvido no **Desafio de Projeto DIO + Itaú**, evoluindo o projeto 
 
 | O que o desafio pede | Resposta curta | Onde ver |
 |---|---|---|
-| **O que o projeto faz** | Recebe um comando de voz ou texto sobre gastos, a IA entende a intenção, executa uma função real da aplicação e responde em linguagem natural (em áudio, no perfil OpenAI). | [Fluxo](#-fluxo-principal) |
+| **O que o projeto faz** | Recebe um comando de voz ou texto sobre gastos; a Lumi entende a intenção, executa uma função real da aplicação e responde em linguagem natural (em áudio, no perfil OpenAI). | [Fluxo](#-fluxo-principal) |
 | **Como executar** | `./mvnw spring-boot:run`, com a chave no `.env`. Roda sem Docker (H2 em memória). | [Como executar](#️-como-executar) |
 | **Qual melhoria implementei** | 15 melhorias sobre o projeto base, com destaque para validações que valem também no caminho da IA, novas consultas e ferramentas, correção do bug de centavos e um perfil gratuito de execução. | [Melhorias](#-melhorias-que-implementei) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Maven, JPA, H2/MySQL, Swagger, JUnit 5. | [Tecnologias](#️-tecnologias) |
@@ -62,7 +69,7 @@ sequenceDiagram
     participant AC as AssistantController
     participant AS as AssistantService
     participant W as Whisper (speech-to-text)
-    participant LLM as ChatClient (gpt-4o-mini)
+    participant LLM as Lumi (ChatClient + LLM)
     participant T as TransactionTools
     participant TS as TransactionService
     participant DB as Banco (JPA)
@@ -98,7 +105,21 @@ Documentação interativa em `http://localhost:8080/swagger-ui.html`, com os end
 
 ![Swagger UI com todos os endpoints da API](docs/images/swagger-overview.png)
 
-O fluxo principal do desafio, com **resposta real da IA**: o áudio foi transcrito, o modelo escolheu a ferramenta, a transação foi gravada no banco e a resposta voltou em linguagem natural.
+### 🎤 Conversando com a Lumi usando a minha própria voz
+
+Gravei dois áudios no celular e mandei para a API. Os dois estão no repositório, em [`docs/audio`](docs/audio), se você quiser ouvir e testar com os mesmos arquivos.
+
+**1. Me apresentando** ([ouvir](docs/audio/01-apresentacao.mp3)) — ela entendeu que não havia gasto nenhum e **não inventou transação**:
+
+![Áudio de apresentação enviado ao endpoint /assistant/voice/text](docs/images/voz-apresentacao.png)
+
+**2. Perguntando quanto gastei** ([ouvir](docs/audio/02-pergunta-quanto-gastei.mp3)) — antes disso eu tinha falado "gastei 300 reais no mercado hoje", e ela buscou o valor no banco em vez de chutar:
+
+![Áudio perguntando o total do mês, respondido com dados reais do banco](docs/images/voz-consulta.png)
+
+> Repare que a Lumi escolheu ferramentas diferentes para cada frase: gravar em uma, consultar na outra. Isso não é um `if` no código — é o modelo escolhendo a função certa a partir da descrição de cada ferramenta.
+
+Com um áudio de exemplo do repositório:
 
 ![POST /assistant/voice/text executado no Swagger, com a transcrição e a resposta da IA](docs/images/assistant-voice-text.png)
 
@@ -363,21 +384,23 @@ Cada teste de ponta a ponta só roda quando a sua chave existe (`AssistantFlowGr
 
 ## 📚 O que aprendi
 
-- **IA não substitui organização de código.** No começo eu achava que a IA era o centro do projeto. Não é. Ela é só mais uma porta de entrada, igual a um endpoint REST. Quem manda continua sendo o service, e foi isso que me permitiu usar o mesmo código para o REST e para a IA.
+- **A IA não é o centro do projeto.** Ela é só mais uma porta de entrada, como um endpoint REST. Quem manda é o service. Foi isso que deixou o mesmo código servir para o REST e para a voz.
 
-- **A IA não passa pelo `@Valid`.** Essa foi a maior surpresa. Quando o modelo chama uma ferramenta, o controller nem é executado, então toda a validação que eu tinha feito no DTO era simplesmente pulada. Se eu não tivesse validado também no service, a IA conseguiria salvar um gasto de valor negativo.
+- **A IA pula o `@Valid`.** Quando o modelo chama uma ferramenta, o controller não roda. Descobri que minhas validações estavam sendo ignoradas nesse caminho. Sem validar também no service, a IA conseguiria salvar um gasto negativo.
 
-- **Dar erro pode ser bom.** Quando a ferramenta lança uma exceção com uma mensagem clara, o Spring AI entrega essa mensagem para o modelo, e ele explica o problema para a pessoa em português. O erro vira conversa, não tela quebrada.
+- **Erro bom é erro explicado.** Se a ferramenta lança uma mensagem clara, o Spring AI passa essa mensagem para o modelo, e ele explica o problema em português para a pessoa.
 
-- **O prompt faz muita diferença.** Só de avisar a data de hoje, proibir inventar valores e pedir frases curtas, as respostas melhoraram bastante. Antes ela chutava valor quando eu não falava o preço; depois passou a perguntar.
+- **O prompt muda tudo.** Depois que avisei a data de hoje e proibi inventar valores, ela parou de chutar preço e passou a perguntar.
 
-- **Dinheiro se guarda em `BigDecimal`.** O projeto base guardava centavos e mostrava 80 reais como 8000.0. Achar esse bug me ensinou mais do que ler sobre o assunto.
+- **Dinheiro é `BigDecimal`.** O projeto base guardava centavos e mostrava 80 reais como 8000.0. Achar esse bug ensinou mais que ler sobre o assunto.
 
-- **Trocar de provedor de IA foi só configuração.** Quando vi que a OpenAI era paga, apontei o projeto para a Groq, que é gratuita, e funcionou sem mudar uma linha de Java. Isso só deu certo porque a IA estava isolada em um service e em uma classe de ferramentas.
+- **Trocar de IA foi só configuração.** A OpenAI é paga, então apontei para a Groq, que é grátis, e funcionou sem mudar uma linha de Java.
 
-- **Biblioteca nova tem bug, e isso é normal.** Meu Tool Calling quebrava com um erro estranho na Groq. Achei a causa lendo o log inteiro e descobri que era um bug do próprio Spring AI, ainda aberto no GitHub ([issue #6968](https://github.com/spring-projects/spring-ai/issues/6968)). Contornei por configuração. Antes eu assumia que o erro era sempre meu.
+- **Nem todo erro é culpa minha.** Um erro estranho no Tool Calling era bug do próprio Spring AI, ainda aberto no GitHub ([issue #6968](https://github.com/spring-projects/spring-ai/issues/6968)). Aprendi a ler o log até o fim antes de duvidar do meu código.
 
-- **Dá para testar IA sem gastar dinheiro.** Quase tudo (service, controller, repository e ferramentas) eu testei com mock, sem chamar a IA. Só o teste de ponta a ponta precisa de chave, e ele se desliga sozinho quando a chave não existe.
+- **Testar IA quase não custa nada.** Só o teste de ponta a ponta precisa de chave, e ele se desliga sozinho quando ela não existe.
+
+- **Testar com a minha voz achou bug.** O Gravador do Windows salva um `.m4a` que não é m4a de verdade, e a API devolvia 500. Virou uma mensagem de erro explicando o que fazer.
 
 ---
 
