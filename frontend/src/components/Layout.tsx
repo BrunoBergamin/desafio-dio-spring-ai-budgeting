@@ -5,6 +5,7 @@ const links = [
   { to: '/conversa', label: 'Lumi', icon: '✨' },
   { to: '/transacoes', label: 'Gastos', icon: '🧾' },
   { to: '/orcamentos', label: 'Orçamentos', icon: '🎯' },
+  { to: '/whatsapp', label: 'WhatsApp', icon: '💬' },
 ];
 
 export function Layout() {

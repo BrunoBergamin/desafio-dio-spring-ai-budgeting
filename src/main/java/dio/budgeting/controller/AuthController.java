@@ -48,6 +48,21 @@ public class AuthController {
         return authService.login(request);
     }
 
+    public record PhoneRequest(
+            @jakarta.validation.constraints.NotBlank(message = "informe o número do WhatsApp") String phone) {
+    }
+
+    @Operation(summary = "Vincula o número do WhatsApp à conta (para falar com a Lumi pelo WhatsApp)",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Número vinculado"),
+            @ApiResponse(responseCode = "422", description = "Número inválido ou já usado por outra conta", content = @Content)
+    })
+    @PutMapping("/me/phone")
+    public UserResponse linkPhone(@Valid @RequestBody PhoneRequest request) {
+        return authService.linkPhone(currentUser.requireUserId(), request.phone());
+    }
+
     @Operation(summary = "Dados do usuário autenticado", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/me")
     public UserResponse me() {

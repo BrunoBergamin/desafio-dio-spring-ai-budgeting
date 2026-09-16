@@ -41,7 +41,7 @@ public class TransactionTools {
     public TransactionRegisteredResponse registerTransaction(
             @ToolParam(description = "Descrição curta do gasto, ex.: 'Compras no mercado'") String description,
             @ToolParam(description = "Valor do gasto em reais, ex.: 80.50") BigDecimal amount,
-            @ToolParam(description = "Categoria do gasto") Category category,
+            @ToolParam(description = "Categoria do gasto. Guia: " + Category.GUIDE) Category category,
             @ToolParam(description = "Data do gasto no formato AAAA-MM-DD. Omita se for hoje", required = false) String date,
             ToolContext toolContext) {
         var userId = ToolUser.require(toolContext);

@@ -6,6 +6,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ChatPage } from './pages/ChatPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { BudgetsPage } from './pages/BudgetsPage';
+import { WhatsAppPage } from './pages/WhatsAppPage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/conversa" element={<ChatPage />} />
           <Route path="/transacoes" element={<TransactionsPage />} />
           <Route path="/orcamentos" element={<BudgetsPage />} />
+          <Route path="/whatsapp" element={<WhatsAppPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/conversa" replace />} />

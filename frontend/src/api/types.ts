@@ -1,6 +1,7 @@
 export type Category =
-  | 'GROCERIES' | 'PHARMA' | 'AUTO' | 'RESTAURANT' | 'TRANSPORT'
-  | 'HOUSING' | 'LEISURE' | 'EDUCATION' | 'OTHER';
+  | 'GROCERIES' | 'RESTAURANT' | 'PHARMA' | 'HOUSING' | 'TRANSPORT' | 'AUTO'
+  | 'SUBSCRIPTIONS' | 'CLOTHING' | 'PERSONAL_CARE' | 'LEISURE' | 'EDUCATION'
+  | 'PETS' | 'TRAVEL' | 'GIFTS' | 'TAXES' | 'OTHER';
 
 export type BudgetStatus = 'OK' | 'WARNING' | 'EXCEEDED';
 
@@ -8,6 +9,14 @@ export interface UserResponse {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
+}
+
+export interface WhatsAppConnection {
+  state: string;
+  qrCodeBase64?: string | null;
+  pairingCode?: string | null;
+  connected: boolean;
 }
 
 export interface AuthResponse {

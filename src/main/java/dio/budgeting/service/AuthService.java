@@ -65,6 +65,37 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("usuário não encontrado"));
     }
 
+    /** Vincula o numero do WhatsApp a conta. Aceita "(19) 99999-9999", "+55 19 ..." etc.; guarda so digitos com DDI. */
+    @Transactional
+    public UserResponse linkPhone(UUID userId, String rawPhone) {
+        var phone = normalizePhone(rawPhone);
+        userRepository.findByPhone(phone)
+                .filter(other -> !other.getId().equals(userId))
+                .ifPresent(other -> {
+                    throw new BusinessException("esse número já está vinculado a outra conta");
+                });
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("usuário não encontrado"));
+        user.linkPhone(phone);
+        log.info("WhatsApp vinculado: user={} phone={}", userId, phone);
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    /** Remove tudo que nao e digito; numeros brasileiros sem DDI (10 ou 11 digitos) ganham o 55. */
+    public static String normalizePhone(String rawPhone) {
+        if (rawPhone == null) {
+            throw new BusinessException("informe o número do WhatsApp");
+        }
+        var digits = rawPhone.replaceAll("\\D", "");
+        if (digits.length() == 10 || digits.length() == 11) {
+            digits = "55" + digits;
+        }
+        if (digits.length() < 12 || digits.length() > 15) {
+            throw new BusinessException("número inválido: use o formato (DDD) 99999-9999 ou +55 DDD 99999-9999");
+        }
+        return digits;
+    }
+
     private AuthResponse issue(User user) {
         return AuthResponse.bearer(jwtService.generate(user), jwtService.expiresInSeconds(), userMapper.toResponse(user));
     }

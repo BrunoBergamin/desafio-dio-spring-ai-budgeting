@@ -31,8 +31,16 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    /** So digitos com DDI (ex.: 5519999999999). Nulo enquanto o WhatsApp nao foi vinculado. */
+    @Column(unique = true, length = 20)
+    private String phone;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    public void linkPhone(String phone) {
+        this.phone = phone;
+    }
 
     public User(String name, String email, String passwordHash) {
         this.name = name;

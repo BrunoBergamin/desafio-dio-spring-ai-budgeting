@@ -92,7 +92,7 @@ class AssistantControllerTest {
     @Test
     @WithMockUser(username = USER_ID)
     void should_returnTranscriptionAndAnswer_when_audioIsSent() throws Exception {
-        when(assistantService.voiceToText(eq(USER), isNull(), any()))
+        when(assistantService.voiceToText(eq(USER), isNull(), any(org.springframework.web.multipart.MultipartFile.class)))
                 .thenReturn(new AssistantResponse("Gastei 80 reais no mercado.", "Registrei oitenta reais em mercado.", "default"));
 
         mockMvc.perform(multipart("/api/assistant/voice/text").file(audioFile()))
@@ -103,7 +103,7 @@ class AssistantControllerTest {
     @Test
     @WithMockUser(username = USER_ID)
     void should_return422_when_fileIsNotAudio() throws Exception {
-        when(assistantService.voiceToText(eq(USER), isNull(), any()))
+        when(assistantService.voiceToText(eq(USER), isNull(), any(org.springframework.web.multipart.MultipartFile.class)))
                 .thenThrow(new BusinessException("o arquivo enviado não é um áudio (text/plain)"));
 
         mockMvc.perform(multipart("/api/assistant/voice/text").file(audioFile()))
