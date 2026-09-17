@@ -1,5 +1,6 @@
 package dio.budgeting.config;
 
+import dio.budgeting.service.BoundedChatMemoryRepository;
 import dio.budgeting.tool.BudgetTools;
 import dio.budgeting.tool.TransactionTools;
 import org.springframework.ai.chat.client.ChatClient;
@@ -17,13 +18,15 @@ public class ChatClientConfig {
     /**
      * Memoria de conversa em RAM, com janela de poucas mensagens: barata, deterministica e suficiente
      * para uma conversa curta. Some ao reiniciar e nao funciona com varias instancias: escolha consciente,
-     * documentada no README. O advisor de memoria roda ANTES do de tool calling, entao o historico nao
+     * documentada no README. O {@link BoundedChatMemoryRepository} limita tambem o NUMERO de conversas
+     * (o id vem do cliente), para a memoria da JVM nao crescer sem controle. O advisor de memoria roda ANTES do de tool calling, entao o historico nao
      * guarda as idas e vindas das ferramentas, so o par pergunta/resposta.
      */
     @Bean
-    ChatMemory chatMemory(@Value("${app.chat.memory-window:10}") int window) {
+    ChatMemory chatMemory(@Value("${app.chat.memory-window:10}") int window,
+                          @Value("${app.chat.max-conversations:200}") int maxConversations) {
         return MessageWindowChatMemory.builder()
-                .chatMemoryRepository(new InMemoryChatMemoryRepository())
+                .chatMemoryRepository(new BoundedChatMemoryRepository(new InMemoryChatMemoryRepository(), maxConversations))
                 .maxMessages(window)
                 .build();
     }

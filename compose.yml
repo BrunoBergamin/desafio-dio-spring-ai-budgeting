@@ -9,6 +9,9 @@ services:
   app:
     build: .
     container_name: lumi
+    # Teto de memoria: a JVM le esse limite e dimensiona o heap (MaxRAMPercentage no Dockerfile)
+    mem_limit: 640m
+    restart: unless-stopped
     ports:
       - "8080:8080"
     # Espera o MySQL ficar saudavel quando o profile mysql esta ativo; sem o profile, e ignorado (required: false)

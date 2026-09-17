@@ -10,6 +10,8 @@ export const authApi = {
   login: (email: string, password: string) =>
     api.post<AuthResponse>('/auth/login', { email, password }).then((r) => r.data),
   me: () => api.get<UserResponse>('/auth/me').then((r) => r.data),
+  /** Entra na conta de demonstracao sem senha (404 quando o modo demo esta desligado). */
+  demo: () => api.post<AuthResponse>('/auth/demo').then((r) => r.data),
   linkPhone: (phone: string) => api.put<UserResponse>('/auth/me/phone', { phone }).then((r) => r.data),
 };
 

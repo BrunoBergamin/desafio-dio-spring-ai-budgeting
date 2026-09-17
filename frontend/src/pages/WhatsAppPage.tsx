@@ -16,7 +16,7 @@ const STATE_LABEL: Record<string, string> = {
 };
 
 export function WhatsAppPage() {
-  const { user } = useAuth();
+  const { user, demo } = useAuth();
   const { notify } = useToast();
   const qc = useQueryClient();
   const [phone, setPhone] = useState('');
@@ -80,7 +80,14 @@ export function WhatsAppPage() {
     <div className="grid-two">
       <section className="card">
         <div className="card-head"><h2>1. Vincular o meu número</h2></div>
-        <p className="muted small">A Lumi só responde a números vinculados a uma conta. Informe o WhatsApp de {user?.name}.</p>
+        {demo ? (
+          <p className="muted small">
+            No modo demo isso é automático: a primeira mensagem que você mandar <b>para você mesmo</b> no WhatsApp
+            pareado já vincula o número a esta conta. Só preencha abaixo se quiser fazer à mão.
+          </p>
+        ) : (
+          <p className="muted small">A Lumi só responde a números vinculados a uma conta. Informe o WhatsApp de {user?.name}.</p>
+        )}
         {me.data?.phone && <p className="pill inline">vinculado: +{me.data.phone}</p>}
         <form className="form" onSubmit={submit}>
           <label>
@@ -98,7 +105,7 @@ export function WhatsAppPage() {
         </div>
         {status.data?.connected ? (
           <div className="stack">
-            <p>Tudo pronto. Mande um "oi" para o número conectado e fale com a Lumi por lá, em texto ou áudio.</p>
+            <p>Tudo pronto. No WhatsApp, abra o chat <b>"Você"</b> (mensagem para mim mesmo) e mande "gastei 30 reais na farmácia", em texto ou áudio. A Lumi responde ali.</p>
             <p className="muted small">Cada pessoa que vincular o próprio número recebe as respostas dos próprios gastos.</p>
           </div>
         ) : (

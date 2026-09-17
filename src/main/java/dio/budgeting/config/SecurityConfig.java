@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/demo").permitAll()
                         // O webhook da Evolution nao tem JWT: e protegido pelo segredo na URL
                         .requestMatchers(HttpMethod.POST, "/api/whatsapp/webhook/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()

@@ -21,7 +21,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-106%20unit%C3%A1rios%20%2B%209%20com%20IA%20real-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-117%20unit%C3%A1rios%20%2B%209%20com%20IA%20real-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -54,10 +54,10 @@ Nasceu como entrega do **Desafio de Projeto DIO + Itaú**, evoluindo o projeto f
 |---|---|---|
 | **O que o projeto faz** | Recebe comando de voz ou texto; a Lumi entende a intenção, executa uma função real (Tool Calling), grava ou consulta no banco e responde. | [Fluxo](#-fluxo-principal) |
 | **Como executar** | `docker compose up --build` (um comando) ou `./mvnw spring-boot:run`. Sem instalar nada além do Docker. | [Rodar](#-rodando-com-um-comando-docker) |
-| **Qual melhoria implementei** | 22 evoluções sobre o projeto base, de validação no caminho da IA até login com JWT e frontend. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
+| **Qual melhoria implementei** | 24 evoluções sobre o projeto base, de validação no caminho da IA até WhatsApp, frontend e modo demo sem senha. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Spring Security 7, JPA + Flyway, React 19, Docker, GitHub Actions. | [Tecnologias](#️-tecnologias) |
 | **Como testar o fluxo principal** | Pelo navegador (botão do microfone), pelo Swagger ou por `curl`, com áudios de exemplo no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
-| **O que aprendi** | Quatorze lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
+| **O que aprendi** | Dezesseis lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
 
 ---
 
@@ -72,7 +72,9 @@ cp .env.example .env        # preencha GROQ_API_KEY (grátis) e APP_JWT_SECRET
 docker compose up --build
 ```
 
-Abra **http://localhost:8080**, crie uma conta e fale com a Lumi. O Swagger fica em `/swagger-ui.html` e o health check em `/actuator/health`.
+Abra **http://localhost:8080** e fale com a Lumi. **Não precisa criar conta nem senha**: o site entra sozinho na conta de demonstração, que já vem com dois meses de gastos fictícios e quatro orçamentos. O Swagger fica em `/swagger-ui.html` e o health check em `/actuator/health`.
+
+> **Modo demonstração (padrão).** A conta `demo@lumi.local` (senha fictícia `lumi-demo-1234`, só existe no seu computador) é criada na primeira subida com 30 lançamentos e 4 limites, e o frontend pega o token em `POST /api/auth/demo`. Quem for testar (recrutador, professor, você no celular) abre a URL e já vê o painel cheio. Para usar de verdade, com cadastro e login normais, coloque `APP_DEMO_ENABLED=false` no `.env`: o JWT, o multiusuário e o isolamento por usuário continuam lá, só ficam escondidos na demonstração.
 
 - A chave da Groq é gratuita: crie em https://console.groq.com/keys (sem cartão).
 - Quer MySQL em vez do H2 em memória? `SPRING_PROFILES_ACTIVE=groq,mysql` no `.env` e `docker compose --profile mysql up --build`.
@@ -90,8 +92,8 @@ docker compose --profile whatsapp up --build
 ```
 
 1. Abra a página **WhatsApp** do site, clique em **Gerar QR code** e escaneie com o seu celular (WhatsApp → Aparelhos conectados).
-2. Ainda na página, **vincule o seu próprio número** à conta.
-3. No WhatsApp, abra o chat **"Você"** (mensagem para mim mesmo) e mande "gastei 30 reais na farmácia", em texto ou áudio. A Lumi responde ali mesmo.
+2. No WhatsApp, abra o chat **"Você"** (mensagem para mim mesmo) e mande "gastei 30 reais na farmácia", em texto ou áudio. A Lumi responde ali mesmo.
+3. No modo demo não precisa vincular nada: a primeira mensagem que você manda para si mesmo liga o número pareado à conta de demonstração. Com o modo demo desligado, vincule o número na própria página WhatsApp.
 
 Foi pensado para o seu WhatsApp pessoal: a Lumi só age no chat com você mesmo. O que você manda para outras pessoas, e o que elas mandam para você, é ignorado em silêncio. (Com um chip exclusivo da Lumi, `WHATSAPP_REPLY_UNKNOWN=true` faz ela responder a desconhecidos com um convite para se cadastrar.)
 
@@ -106,6 +108,8 @@ Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento
 ## 📸 A aplicação rodando
 
 **Painel**: gasto do mês com comparação ao mês anterior, maior categoria, orçamentos, gráfico por categoria e por dia, últimos lançamentos. Navegação por mês, tema escuro e claro.
+
+![Painel da conta demo: indicadores do mês, gráficos por categoria e por dia, últimos lançamentos e orçamentos](docs/images/ui-painel-demo.png)
 
 ![Painel com indicadores do mês, gráfico por categoria, gráfico por dia, últimos lançamentos e orçamentos](docs/images/ui-painel.png)
 
@@ -216,12 +220,16 @@ As três que mais valem uma conversa de entrevista:
 O Spring AI injeta um parâmetro `ToolContext` no método `@Tool` e **o exclui do JSON Schema** enviado ao modelo. Logo a IA não vê, não descreve e não consegue preencher o `userId`. Há um teste que manda um `userId` falso nos argumentos da ferramenta e prova que ele é ignorado (`TransactionToolsTest.should_ignoreUserIdSentByTheModel`). O `SecurityContextHolder` até funciona hoje, porque o `ToolCallingAdvisor.adviseCall` é síncrono, mas trocar `.call()` por `.stream()` moveria a execução para outra thread e o `ThreadLocal` sumiria em silêncio. Defesa em quatro camadas: schema, assinatura do service, filtro no repositório e `ToolUser.require`, que explode se o contexto vier vazio.
 
 **2. A memória de conversa fica fora do loop de ferramentas.**
-O `MessageChatMemoryAdvisor` (ordem `MIN+200`) roda antes do `ToolCallingAdvisor` (`MIN+300`), então o histórico guarda só o par pergunta/resposta, e não as idas e vindas das ferramentas. Isso segura o custo em tokens. A chave da memória é sempre `userId:conversa`, derivada do JWT: mandar o mesmo `conversationId` de outra pessoa não lê nada dela. Memória em RAM com janela de 10 mensagens, escolha consciente: some no restart e não funciona com várias instâncias, e está documentado.
+O `MessageChatMemoryAdvisor` (ordem `MIN+200`) roda antes do `ToolCallingAdvisor` (`MIN+300`), então o histórico guarda só o par pergunta/resposta, e não as idas e vindas das ferramentas. Isso segura o custo em tokens. A chave da memória é sempre `userId:conversa`, derivada do JWT: mandar o mesmo `conversationId` de outra pessoa não lê nada dela. Memória em RAM com janela de 10 mensagens, escolha consciente: some no restart e não funciona com várias instâncias, e está documentado. Como o id da conversa vem do cliente, a janela sozinha não bastaria: um `BoundedChatMemoryRepository` (Decorator sobre o repositório do Spring AI) guarda no máximo 200 conversas e descarta a parada há mais tempo (LRU).
 
 **3. O alerta de orçamento é determinístico, não depende do modelo lembrar.**
 Em vez de esperar que a IA chame uma segunda ferramenta, a própria `registrar_transacao` devolve a transação **e** o status do orçamento. O modelo recebe o alerta no resultado e comenta naturalmente, sem round-trip extra. Os limiares (80% / 100%) são calculados com os valores exatos, não com o percentual arredondado: `399,99 de 500` ainda é OK. Um teste de fronteira pegou esse bug antes de virar produto.
 
 Outras decisões: `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o **mesmo SQL** servir H2 e MySQL (`DATETIME` não existe no H2 2.x; UUID nativo vira `BINARY(16)` no MySQL); JWT com o suporte nativo do Spring Security (`NimbusJwtEncoder`, HS256) em vez de biblioteca extra; 401/403 escritos como `ProblemDetail` por um `AuthenticationEntryPoint` próprio, porque exceções de segurança acontecem antes do `@RestControllerAdvice`; frontend empacotado dentro do jar para **uma porta, sem CORS, um container**; token no `localStorage` com o trade-off (XSS) documentado, cookie `HttpOnly` seria o próximo passo.
+
+**Memória da JVM sob controle.** Tudo que fica em RAM tem teto: conversas (200, LRU), mensagens por conversa (10), ids de mensagens enviadas ao WhatsApp (500, LRU), áudio de upload (10 MB, `MultipartFile`), lista que a ferramenta devolve ao modelo (50 lançamentos; para totais existe `resumo_de_gastos`, que agrega no banco). O webhook do WhatsApp roda em **threads virtuais** (Java 21+, `spring.threads.virtual.enabled`) com limite de 8 em paralelo, que dá backpressure em vez de fila infinita; o pool do Hikari tem 5 conexões; no Docker o container tem `mem_limit: 640m` e a JVM lê esse teto (`MaxRAMPercentage=75`, `ExitOnOutOfMemoryError` para cair e subir de novo em vez de virar zumbi). No navegador, os blobs de áudio da conversa são liberados com `URL.revokeObjectURL` ao sair da página.
+
+**Padrões de projeto que aparecem no código**, sem inventar camada nova: *Ports and Adapters* na integração com o WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador; a API oficial da Meta entraria como outro adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas do banco e da API; *Null Object* implícito no text-to-speech opcional (`ObjectProvider` + `Optional`, sem `if` de perfil espalhado); *Strategy* de configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
 
 ---
 
@@ -237,7 +245,7 @@ Outras decisões: `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o **mesmo S
 | 6 | **Memória de conversa** (`MessageWindowChatMemory`): "e o de ontem?" funciona; chave por usuário; `DELETE /api/assistant/conversation`. | `LumiChat`, `ConversationKey` |
 | 7 | **Orçamento mensal por categoria com alertas** (OK / atenção / estourado) e 4 ferramentas novas para a Lumi. | `BudgetService`, `BudgetTools` |
 | 8 | **Alerta entregue junto do registro do gasto**, sem round-trip extra ao modelo. | `ExpenseService` |
-| 9 | **Migrations com Flyway** (3 versões, SQL portátil H2/MySQL) e `ddl-auto=validate`; os testes de repositório rodam sobre as migrations. | `db/migration`, `@JpaTest` |
+| 9 | **Migrations com Flyway** (4 versões, SQL portátil H2/MySQL) e `ddl-auto=validate`; os testes de repositório rodam sobre as migrations. | `db/migration`, `@JpaTest` |
 | 10 | **Frontend React 19 + Vite + TypeScript**: painel com indicadores e dois gráficos, chat com microfone, upload e arrastar-e-soltar de áudio (aceita as notas de voz do WhatsApp), histórico persistente, tema claro/escuro, notificações, edição inline de gastos e orçamentos, navegação por mês, layout de celular com menu inferior. Dados com React Query (cache e invalidação), 10 testes com Vitest + Testing Library. | `frontend/`, `SpaForwardController` |
 | 11 | **Docker em 3 estágios** (Node → Maven → JRE), usuário não-root, `HEALTHCHECK`, `compose` com MySQL opcional. | `Dockerfile`, `compose.yml` |
 | 12 | **CI no GitHub Actions**: backend, frontend e imagem Docker, verde sem nenhum segredo. | `.github/workflows/ci.yml` |
@@ -248,9 +256,11 @@ Outras decisões: `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o **mesmo S
 | 17 | **Áudio em formato inesperado vira 422 explicado** (o Gravador do Windows salva AAC cru como `.m4a`). Descoberto testando com a minha voz. | `AssistantService` |
 | 18 | **Erros padronizados** com `ProblemDetail` em toda a API, inclusive 401/403 da camada de segurança. | `GlobalExceptionHandler`, `ProblemDetailResponses` |
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
+| 20 | **117 testes** (unitários, `@WebMvcTest` com segurança real, `@DataJpaTest` com Flyway, ponta a ponta com IA). | `src/test` |
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, vínculo número → conta, áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
 | 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. Sem migration: a coluna já era texto. | `Category` |
-| 20 | **106 testes** (unitários, `@WebMvcTest` com segurança real, `@DataJpaTest` com Flyway, ponta a ponta com IA). | `src/test` |
+| 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
+| 24 | **Memória sob controle**: conversas limitadas (Decorator LRU), threads virtuais com limite de paralelismo, lista da ferramenta com teto, `mem_limit` no compose e JVM que respeita o container. | `BoundedChatMemoryRepository`, `application.properties`, `compose.yml` |
 
 ---
 
@@ -288,7 +298,7 @@ Para servir o React pela própria API (como no Docker): `npm run build`, copie `
 | O quê | URL |
 |------|-----|
 | Aplicação | http://localhost:8080 (ou :5173 em dev) |
-| Swagger UI | http://localhost:8080/swagger-ui.html: botão **Authorize** com o token do `/api/auth/login` |
+| Swagger UI | http://localhost:8080/swagger-ui.html: botão **Authorize** com o token do `/api/auth/demo` (sem senha) ou do `/api/auth/login` |
 | Health | http://localhost:8080/actuator/health |
 | Console H2 | http://localhost:8080/h2-console (`jdbc:h2:mem:budgeting`, usuário `sa`) |
 
@@ -298,16 +308,15 @@ Perfil OpenAI (com áudio de resposta em MP3): defina `OPENAI_API_KEY` e rode se
 
 ## 🧪 Como testar o fluxo principal
 
-**Pelo navegador (mais fácil):** crie uma conta, clique no microfone, fale *"gastei 45 reais na farmácia"* e veja a transação aparecer no gráfico. Depois pergunte *"quanto gastei este mês?"*.
+**Pelo navegador (mais fácil):** abra http://localhost:8080 (já entra na conta demo), clique no microfone, fale *"gastei 45 reais na farmácia"* e veja a transação aparecer no gráfico. Depois pergunte *"quanto gastei este mês?"*.
 
-**Pelo Swagger:** `POST /api/auth/register` → copie o `token` → botão **Authorize** → `POST /api/assistant/voice/text` com um dos áudios de `src/test/resources/audio`.
+**Pelo Swagger:** `POST /api/auth/demo` (ou `/register`) → copie o `token` → botão **Authorize** → `POST /api/assistant/voice/text` com um dos áudios de `src/test/resources/audio`.
 
 **Por `curl`** (o arquivo [`requests.http`](requests.http) tem tudo pronto para o IntelliJ/VS Code):
 
 ```bash
-# 1. conta + token
-TOKEN=$(curl -s -X POST localhost:8080/api/auth/register -H "Content-Type: application/json" \
-  -d '{"name":"Bruno","email":"bruno@email.com","password":"senha-forte-123"}' | jq -r .token)
+# 1. token da conta demo (sem senha). Com APP_DEMO_ENABLED=false, use /api/auth/register
+TOKEN=$(curl -s -X POST localhost:8080/api/auth/demo | jq -r .token)
 
 # 2. limite do mês
 curl -s -X POST localhost:8080/api/budgets -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
@@ -337,6 +346,7 @@ Resposta real do passo 3 (o texto varia conforme o modelo):
 
 | Método | Rota | Descrição |
 |-------|------|-----------|
+| POST | `/api/auth/demo` | Token da conta de demonstração, sem senha (público; 404 com o modo demo desligado) |
 | POST | `/api/auth/register` · `/api/auth/login` | Conta e token JWT (público) |
 | GET | `/api/auth/me` | Usuário autenticado |
 | POST/GET | `/api/transactions` | Registra · lista (`?category=&start=&end=`) |
@@ -360,23 +370,23 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 106 testes sem custo (unitários, WebMvc com segurança real, JPA sobre as migrations)
+./mvnw test      # 117 testes sem custo (unitários, WebMvc com segurança real, JPA sobre as migrations)
 ./mvnw verify    # + 9 de ponta a ponta com a IA (só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir)
 ```
 
 | Classe | Tipo | O que garante |
 |-------|------|---------------|
 | `TransactionServiceTest`, `BudgetServiceTest`, `ExpenseServiceTest` | Unitário | validações, 404 para dado alheio, total/percentual, **fronteiras 80%/100% do orçamento**, alerta no registro |
-| `AuthServiceTest`, `JwtServiceTest` | Unitário | cadastro, e-mail duplicado, credencial inválida → 401, token com `sub` = id, assinatura com outra chave falha |
-| `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, formatos de áudio, TTS desligado |
+| `AuthServiceTest`, `JwtServiceTest` | Unitário | cadastro, e-mail duplicado, credencial inválida → 401, login demo (e recusa com o modo desligado), token com `sub` = id, assinatura com outra chave falha |
+| `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest`, `BoundedChatMemoryRepositoryTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, formatos de áudio, TTS desligado, **conversa mais antiga descartada ao passar do limite** |
 | `TransactionToolsTest`, `BudgetToolsTest` | Unitário | ferramentas expostas, **`userId` fora do schema**, `userId` falso do modelo ignorado, fail-fast sem contexto |
 | `AuthControllerTest`, `TransactionControllerTest`, `BudgetControllerTest`, `AssistantControllerTest` | `@WebMvcTest` + `SecurityConfig` real | 401 com `ProblemDetail`, 201/400/404/422/503, validação por campo |
-| `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | ignora mensagens próprias/grupos, extrai número (inclusive com LID), número não vinculado só recebe convite, áudio em base64 vai para o Whisper, segredo errado → 404 |
+| `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | chat "Você" aceito e eco da própria resposta ignorado, mensagens para outras pessoas e grupos ignoradas, extrai número (inclusive com LID), vínculo automático da conta demo, áudio em base64 vai para o Whisper, segredo errado → 404 |
 | `TransactionRepositoryTest`, `UserAndBudgetRepositoryTest` | `@DataJpaTest` + Flyway | isolamento por usuário nas queries, agregações, `UNIQUE` de e-mail e de orçamento |
 | `format.test.ts`, `BudgetBar.test.tsx`, `useChatHistory.test.tsx` (frontend, Vitest) | Componente / hook | intervalo do mês, dinheiro em pt-BR, edição inline do limite, histórico do chat por usuário sem vazar URLs de áudio |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **106 no backend + 10 no frontend** sem chave; **125** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
+Resultado local: **117 no backend + 10 no frontend** sem chave; **126** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
 
 ---
 
@@ -408,7 +418,21 @@ Resultado local: **106 no backend + 10 no frontend** sem chave; **125** com a ch
 
 - **WhatsApp é só mais uma porta.** Como a Lumi vive no service, atender pelo WhatsApp foi um webhook, um cliente HTTP e uma tabela de números: o núcleo não mudou. E o formato do WhatsApp (`ogg/opus`) é aceito pelo Whisper sem conversão, ao contrário do Gravador do Windows.
 
+- **Tudo que fica em RAM precisa de teto.** A memória de conversa do Spring AI limita mensagens por conversa, mas não o número de conversas, e o id vem do cliente. Um Decorator com LRU resolveu sem trocar a biblioteca. A mesma pergunta ("isso cresce para sempre?") valeu para o `@Async`, para a lista que a ferramenta manda ao modelo e para os blobs de áudio no navegador.
+
+- **Para demonstrar, tire o atrito.** Ninguém quer criar conta para testar um projeto de portfólio. O modo demo entra sozinho numa conta com dados, e o login de verdade continua a um `APP_DEMO_ENABLED=false` de distância.
+
 - **Testar com a minha própria voz achou bug.** O Gravador do Windows salva um `.m4a` que não é m4a; a API dava 500. Virou uma mensagem explicando o que fazer, e o frontend gravando em `webm` eliminou o problema de vez.
+
+---
+
+## 🔭 Próximos passos
+
+- **Conexão com o banco (Open Finance):** importar os lançamentos da conta e do cartão pela API do banco e deixar a Lumi só classificar e comentar. O `ExpenseService` já é o ponto único de entrada de um gasto, então a importação seria mais uma porta, como o WhatsApp foi.
+- **API oficial do WhatsApp (Meta Cloud API):** outra implementação de `WhatsAppGateway`, sem mexer no resto.
+- **Memória de conversa em banco** (`JdbcChatMemoryRepository`) para sobreviver ao restart e a várias instâncias.
+- **Token em cookie `HttpOnly`** no lugar do `localStorage`.
+- **Metas de economia e receitas**, para o painel mostrar saldo e não só gastos.
 
 ---
 

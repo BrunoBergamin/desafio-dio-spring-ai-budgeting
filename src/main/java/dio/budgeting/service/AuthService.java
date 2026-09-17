@@ -33,6 +33,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserMapper userMapper;
+    private final dio.budgeting.demo.DemoProperties demoProperties;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -55,6 +56,17 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
         var user = userRepository.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        return issue(user);
+    }
+
+    /** Modo demo: entra na conta de demonstracao sem senha. Recusa (404) quando o modo esta desligado. */
+    @Transactional(readOnly = true)
+    public AuthResponse demoLogin() {
+        if (!demoProperties.enabled()) {
+            throw new ResourceNotFoundException("o modo demonstração está desligado");
+        }
+        var user = userRepository.findByEmail(demoProperties.email())
+                .orElseThrow(() -> new ResourceNotFoundException("conta demo ainda não foi criada"));
         return issue(user);
     }
 

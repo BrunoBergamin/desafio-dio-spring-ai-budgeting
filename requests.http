@@ -1,7 +1,10 @@
 ### Requisições prontas para o IntelliJ (HTTP Client) ou VS Code (extensão REST Client)
-### Ordem: registrar (ou logar) -> copiar o token na variável abaixo -> usar o resto
+### Ordem: pegar o token (demo, registrar ou logar) -> copiar na variável abaixo -> usar o resto
 @base = http://localhost:8080/api
 @token = COLE_AQUI_O_TOKEN
+
+### Token da conta demo, sem senha (modo demo, padrão)
+POST {{base}}/auth/demo
 
 ### Criar conta (já devolve o token)
 POST {{base}}/auth/register

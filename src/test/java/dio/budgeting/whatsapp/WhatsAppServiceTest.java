@@ -31,7 +31,25 @@ class WhatsAppServiceTest {
     @Mock AssistantService assistantService;
     @Mock UserRepository userRepository;
     @Mock WhatsAppProperties properties;
+    @Mock dio.budgeting.demo.DemoProperties demoProperties;
     @InjectMocks WhatsAppService service;
+
+    @Test
+    void should_linkPairedNumberToDemoAccount_onFirstSelfMessage_when_demoIsEnabled() {
+        var demo = userWithId();
+        when(userRepository.findByPhone(PHONE)).thenReturn(Optional.empty());
+        when(demoProperties.enabled()).thenReturn(true);
+        when(demoProperties.email()).thenReturn("demo@lumi.local");
+        when(userRepository.findByEmail("demo@lumi.local")).thenReturn(Optional.of(demo));
+        when(userRepository.save(demo)).thenReturn(demo);
+        when(assistantService.chat(demo.getId(), "whatsapp", "gastei 10 reais")).thenReturn(new AssistantResponse(null, "Registrei.", "whatsapp"));
+        when(assistantService.speak(any())).thenReturn(Optional.empty());
+
+        service.handle(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", true), text("gastei 10 reais")));
+
+        assertThat(demo.getPhone()).isEqualTo(PHONE);
+        verify(gateway).sendText(PHONE, "Registrei.");
+    }
 
     static final String FRIEND = "5511888888888";
 
@@ -102,7 +120,7 @@ class WhatsAppServiceTest {
 
         service.handle(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", false), text("oi")));
 
-        verifyNoInteractions(gateway, assistantService);
+        verifyNoInteractions(gateway, assistantService, demoProperties);
     }
 
     @Test

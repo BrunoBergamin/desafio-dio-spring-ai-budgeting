@@ -8,6 +8,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 /** Liga as propriedades do WhatsApp e o @Async usado para responder fora da thread do webhook. */
 @Configuration
 @EnableAsync
-@EnableConfigurationProperties(WhatsAppProperties.class)
+@EnableConfigurationProperties({WhatsAppProperties.class, dio.budgeting.demo.DemoProperties.class})
 public class WhatsAppConfig {
 }

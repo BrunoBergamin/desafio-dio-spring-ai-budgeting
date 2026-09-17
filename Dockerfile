@@ -28,4 +28,5 @@ USER 1001
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \
   CMD curl -fsS http://localhost:8080/actuator/health || exit 1
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
+# 75% da memoria do container para o heap; se estourar, o processo cai e o Docker sobe outro (nao fica zumbi)
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]
