@@ -90,7 +90,7 @@ docker compose --profile whatsapp up --build
 ```
 
 1. Abra a página **WhatsApp** do site, clique em **Gerar QR code** e escaneie com o celular (WhatsApp → Aparelhos conectados). Use um chip que não seja o seu pessoal.
-2. Ainda na página, **vincule o seu número** à conta. Número desconhecido recebe só um convite para se cadastrar: a Lumi nunca registra gasto de quem ela não conhece.
+2. Ainda na página, **vincule o seu número** à conta. Mensagens de números não vinculados são **ignoradas em silêncio**: o WhatsApp pareado recebe mensagem de todo mundo, e a Lumi não pode sair respondendo aos seus contatos. (Com um chip exclusivo da Lumi, `WHATSAPP_REPLY_UNKNOWN=true` faz ela responder com um convite para se cadastrar.)
 3. Mande "gastei 30 reais na farmácia" (texto ou áudio) para o número conectado.
 
 ![Página WhatsApp: vincular o número e QR code gerado pela Evolution API](docs/images/ui-whatsapp.png)

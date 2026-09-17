@@ -30,6 +30,7 @@ class WhatsAppServiceTest {
     @Mock WhatsAppGateway gateway;
     @Mock AssistantService assistantService;
     @Mock UserRepository userRepository;
+    @Mock WhatsAppProperties properties;
     @InjectMocks WhatsAppService service;
 
     @Test
@@ -59,8 +60,20 @@ class WhatsAppServiceTest {
     }
 
     @Test
-    void should_replyWithInstructions_when_phoneIsNotLinked() {
+    void should_stayQuiet_when_phoneIsNotLinked() {
+        // Padrao: o WhatsApp pareado recebe mensagem de qualquer pessoa; estranhos nao recebem resposta
         when(userRepository.findByPhone(PHONE)).thenReturn(Optional.empty());
+        when(properties.replyUnknown()).thenReturn(false);
+
+        service.handle(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", false), text("oi")));
+
+        verifyNoInteractions(gateway, assistantService);
+    }
+
+    @Test
+    void should_replyWithInstructions_when_phoneIsNotLinkedAndReplyIsEnabled() {
+        when(userRepository.findByPhone(PHONE)).thenReturn(Optional.empty());
+        when(properties.replyUnknown()).thenReturn(true);
 
         service.handle(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", false), text("oi")));
 
