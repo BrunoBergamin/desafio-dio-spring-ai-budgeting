@@ -37,15 +37,34 @@ public class LumiChat {
     }
 
     public String answer(java.util.UUID userId, String conversationKey, String message) {
-        var answer = chatClient.prompt()
+        var answer = dropRepeatedOpening(chatClient.prompt()
                 .system(system -> system.text(systemPrompt).param("today", LocalDate.now().format(TODAY_FORMAT)))
                 .toolContext(Map.of(ToolUser.USER_ID, userId))
                 .advisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, conversationKey))
                 .user(message)
                 .call()
-                .content();
+                .content());
         log.info("[lumi] user={} conversa={} pergunta='{}' | resposta='{}'", userId, conversationKey, message, answer);
         return answer;
+    }
+
+    /**
+     * Alguns modelos (o gpt-oss da Groq, por exemplo) mandam uma frase "de passagem" junto com a chamada da
+     * ferramenta e depois a resposta final; o {@code ToolCallingAdvisor} junta os dois textos e a pessoa recebe
+     * "Neste mês você gastou X.Neste mês você gastou X. ...". Se a primeira frase aparece de novo mais adiante,
+     * fica so a partir da segunda ocorrencia, que e a resposta completa.
+     */
+    static String dropRepeatedOpening(String answer) {
+        if (answer == null || answer.isBlank()) {
+            return answer;
+        }
+        var firstStop = answer.indexOf(". ");
+        var opening = firstStop > 0 ? answer.substring(0, firstStop + 1) : null;
+        if (opening == null) {
+            return answer;
+        }
+        var again = answer.indexOf(opening, opening.length());
+        return again > 0 ? answer.substring(again).strip() : answer;
     }
 
     public void forget(String conversationKey) {
