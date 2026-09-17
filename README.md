@@ -21,11 +21,11 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-117%20unit%C3%A1rios%20%2B%209%20com%20IA%20real-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-119%20unit%C3%A1rios%20%2B%209%20com%20IA%20real-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
-[Rodar com Docker](#-rodando-com-um-comando-docker) · [WhatsApp](#-falando-com-a-lumi-pelo-whatsapp) · [Prints](#-a-aplicação-rodando) · [Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura) · [Decisões](#-decisões-de-arquitetura) · [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) · [Rodar sem Docker](#️-rodando-sem-docker) · [Endpoints](#endpoints) · [Testes](#-testes-automatizados) · [O que aprendi](#-o-que-aprendi)
+[Rodar com Docker](#-rodando-com-um-comando-docker) · [WhatsApp](#-falando-com-a-lumi-pelo-whatsapp) · [Como usei IA](#-como-usei-ia-para-construir-o-projeto) · [Prints](#-a-aplicação-rodando) · [Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura) · [Decisões](#-decisões-de-arquitetura) · [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) · [Rodar sem Docker](#️-rodando-sem-docker) · [Endpoints](#endpoints) · [Testes](#-testes-automatizados) · [O que aprendi](#-o-que-aprendi)
 
 </div>
 
@@ -46,6 +46,8 @@ Nasceu como entrega do **Desafio de Projeto DIO + Itaú**, evoluindo o projeto f
 
 > **Tudo aqui foi rodado de verdade e sem pagar nada**, na camada gratuita da [Groq](https://console.groq.com). Os prints e as respostas deste README são reais, não exemplos inventados.
 
+> 💸 **Custo para rodar: zero.** A IA (chat e transcrição de áudio) usa o plano gratuito da Groq, que tem um limite diário de requisições e tokens mais do que suficiente para uso pessoal, sem cartão de crédito. O WhatsApp usa a [Evolution API](https://github.com/EvolutionAPI/evolution-api), que é open source e roda no seu computador dentro do `docker compose`, sem mensalidade. Banco (H2 ou MySQL), Docker, GitHub Actions: tudo gratuito. A única coisa paga é opcional: a resposta em áudio (text-to-speech) do perfil OpenAI, que a aplicação desliga sozinha quando a chave não existe.
+
 ---
 
 ## ✅ O que a entrega cobre
@@ -57,7 +59,7 @@ Nasceu como entrega do **Desafio de Projeto DIO + Itaú**, evoluindo o projeto f
 | **Qual melhoria implementei** | 24 evoluções sobre o projeto base, de validação no caminho da IA até WhatsApp, frontend e modo demo sem senha. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Spring Security 7, JPA + Flyway, React 19, Docker, GitHub Actions. | [Tecnologias](#️-tecnologias) |
 | **Como testar o fluxo principal** | Pelo navegador (botão do microfone), pelo Swagger ou por `curl`, com áudios de exemplo no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
-| **O que aprendi** | Dezesseis lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
+| **O que aprendi** | Dezessete lições, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
 
 ---
 
@@ -97,7 +99,16 @@ docker compose --profile whatsapp up --build
 
 Foi pensado para o seu WhatsApp pessoal: a Lumi só age no chat com você mesmo. O que você manda para outras pessoas, e o que elas mandam para você, é ignorado em silêncio. (Com um chip exclusivo da Lumi, `WHATSAPP_REPLY_UNKNOWN=true` faz ela responder a desconhecidos com um convite para se cadastrar.)
 
+Testado no meu próprio WhatsApp, no chat "Você", só com áudio. Três notas de voz e três respostas da Lumi: registrou os cinquenta reais da farmácia, resumiu o mês (dados fictícios da conta demo) e, quando pedi ideias de economia, usou os números reais das categorias (restaurantes, assinaturas, lazer) em vez de dar conselho genérico:
+
+<p align="center"><img src="docs/images/whatsapp-conversa.jpeg" alt="Conversa real no WhatsApp: três áudios enviados para mim mesmo e as respostas da Lumi" width="420"></p>
+
+<details>
+<summary><b>Página WhatsApp do site: parear pelo QR code (clique para ver)</b></summary>
+
 ![Página WhatsApp: vincular o número e QR code gerado pela Evolution API](docs/images/ui-whatsapp.png)
+
+</details>
 
 Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento `messages.upsert`, responde `202` na hora e processa em segundo plano (`@Async`); o áudio chega em base64 (`ogg/opus`, aceito direto pelo Whisper); o número vira o usuário pela tabela `users.phone`; a resposta volta por `POST /message/sendText` (e em áudio, no perfil OpenAI). No chat "Você" a própria resposta da Lumi volta pelo webhook como se fosse sua: a aplicação guarda os ids do que enviou e ignora o eco, senão ela conversaria consigo mesma para sempre. A conversa do WhatsApp tem memória própria, separada da do site. O provedor fica atrás da interface `WhatsAppGateway`: trocar a Evolution pela **API oficial da Meta** é escrever outra implementação, e mais nada.
 
@@ -111,19 +122,17 @@ Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento
 
 ![Painel da conta demo: indicadores do mês, gráficos por categoria e por dia, últimos lançamentos e orçamentos](docs/images/ui-painel-demo.png)
 
-![Painel com indicadores do mês, gráfico por categoria, gráfico por dia, últimos lançamentos e orçamentos](docs/images/ui-painel.png)
-
 **Conversa com a Lumi**: microfone, upload de arquivo de áudio (inclusive as notas de voz `.ogg` do WhatsApp, arrastando para a tela), histórico guardado no navegador, horário em cada mensagem. Abaixo, uma frase com dois gastos e uma nota de voz enviada como arquivo:
 
 ![Conversa: dois gastos numa frase, nota de voz do WhatsApp enviada como arquivo e transcrita, alerta de orçamento](docs/images/ui-conversa.png)
 
 <details>
-<summary><b>Tema claro, celular, gastos e login (clique para ver)</b></summary>
+<summary><b>Tema escuro, celular, gastos e login (clique para ver)</b></summary>
 
-![Painel no tema claro](docs/images/ui-painel-claro.png)
+![Painel no tema escuro](docs/images/ui-painel.png)
 ![Conversa no celular, com o menu embaixo](docs/images/ui-mobile.png)
 ![Gastos com navegação por mês, busca, ordenação e edição inline](docs/images/ui-gastos.png)
-![Tela de login](docs/images/ui-login.png)
+![Tela de login, usada quando o modo demo está desligado](docs/images/ui-login.png)
 
 </details>
 
@@ -256,7 +265,7 @@ Outras decisões: `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o **mesmo S
 | 17 | **Áudio em formato inesperado vira 422 explicado** (o Gravador do Windows salva AAC cru como `.m4a`). Descoberto testando com a minha voz. | `AssistantService` |
 | 18 | **Erros padronizados** com `ProblemDetail` em toda a API, inclusive 401/403 da camada de segurança. | `GlobalExceptionHandler`, `ProblemDetailResponses` |
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
-| 20 | **117 testes** (unitários, `@WebMvcTest` com segurança real, `@DataJpaTest` com Flyway, ponta a ponta com IA). | `src/test` |
+| 20 | **119 testes** (unitários, `@WebMvcTest` com segurança real, `@DataJpaTest` com Flyway, ponta a ponta com IA). | `src/test` |
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, vínculo número → conta, áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
 | 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. Sem migration: a coluna já era texto. | `Category` |
 | 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
@@ -370,7 +379,7 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 117 testes sem custo (unitários, WebMvc com segurança real, JPA sobre as migrations)
+./mvnw test      # 119 testes sem custo (unitários, WebMvc com segurança real, JPA sobre as migrations)
 ./mvnw verify    # + 9 de ponta a ponta com a IA (só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir)
 ```
 
@@ -378,7 +387,7 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 |-------|------|---------------|
 | `TransactionServiceTest`, `BudgetServiceTest`, `ExpenseServiceTest` | Unitário | validações, 404 para dado alheio, total/percentual, **fronteiras 80%/100% do orçamento**, alerta no registro |
 | `AuthServiceTest`, `JwtServiceTest` | Unitário | cadastro, e-mail duplicado, credencial inválida → 401, login demo (e recusa com o modo desligado), token com `sub` = id, assinatura com outra chave falha |
-| `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest`, `BoundedChatMemoryRepositoryTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, formatos de áudio, TTS desligado, **conversa mais antiga descartada ao passar do limite** |
+| `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest`, `BoundedChatMemoryRepositoryTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, resposta duplicada pelo modelo limpa, formatos de áudio, TTS desligado, **conversa mais antiga descartada ao passar do limite** |
 | `TransactionToolsTest`, `BudgetToolsTest` | Unitário | ferramentas expostas, **`userId` fora do schema**, `userId` falso do modelo ignorado, fail-fast sem contexto |
 | `AuthControllerTest`, `TransactionControllerTest`, `BudgetControllerTest`, `AssistantControllerTest` | `@WebMvcTest` + `SecurityConfig` real | 401 com `ProblemDetail`, 201/400/404/422/503, validação por campo |
 | `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | chat "Você" aceito e eco da própria resposta ignorado, mensagens para outras pessoas e grupos ignoradas, extrai número (inclusive com LID), vínculo automático da conta demo, áudio em base64 vai para o Whisper, segredo errado → 404 |
@@ -386,7 +395,19 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 | `format.test.ts`, `BudgetBar.test.tsx`, `useChatHistory.test.tsx` (frontend, Vitest) | Componente / hook | intervalo do mês, dinheiro em pt-BR, edição inline do limite, histórico do chat por usuário sem vazar URLs de áudio |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **117 no backend + 10 no frontend** sem chave; **126** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
+Resultado local: **119 no backend + 10 no frontend** sem chave; **128** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
+
+---
+
+## 🤝 Como usei IA para construir o projeto
+
+O desafio incentiva usar o DIO Agent como parceiro de estudos, e eu fui além: usei IA generativa (Claude Code, da Anthropic) como par de programação durante todo o projeto, e acho justo dizer isso de forma clara.
+
+- **Frontend React:** foi escrito pela IA a partir do que eu pedi (páginas, gráficos, gravação pelo microfone, tema, layout de celular). O meu papel foi definir o que a tela precisava fazer, testar cada versão no navegador e no celular, apontar o que estava errado (o menu do celular no lugar errado, o mês com inicial maiúscula, os travessões nos textos) e pedir os ajustes.
+- **Backend Spring:** construído em conjunto. Eu trouxe as ideias e as decisões (manter as camadas clássicas, migrar para Java 25 e Maven, sair da OpenAI paga para a Groq gratuita, não usar Kafka, JWT sem biblioteca extra, WhatsApp pelo chat "Você", modo demo sem senha, limites de memória); a IA escreveu boa parte do código e dos testes, e eu revisei, rodei e cobrei quando algo não funcionava (foi assim que apareceram o bug da Groq com o `reasoning_content`, o `.m4a` do Windows e a Lumi respondendo para um amigo meu).
+- **Ideias e documentação:** as evoluções foram discutidas com a IA (o que vale a pena para um banco, o que é enfeite), e este README foi escrito a quatro mãos e revisado por mim.
+
+O que é meu de verdade: as escolhas, os testes com a minha voz e o meu WhatsApp, o entendimento de cada peça (consigo explicar o `ToolContext`, a ordem dos advisors e por que o alerta de orçamento não depende do modelo) e o aprendizado abaixo. Trabalhar assim é, na minha visão, como o desenvolvimento vai ser daqui para a frente: a IA acelera, a pessoa decide e responde pelo resultado.
 
 ---
 
@@ -421,6 +442,8 @@ Resultado local: **117 no backend + 10 no frontend** sem chave; **126** com a ch
 - **Tudo que fica em RAM precisa de teto.** A memória de conversa do Spring AI limita mensagens por conversa, mas não o número de conversas, e o id vem do cliente. Um Decorator com LRU resolveu sem trocar a biblioteca. A mesma pergunta ("isso cresce para sempre?") valeu para o `@Async`, para a lista que a ferramenta manda ao modelo e para os blobs de áudio no navegador.
 
 - **Para demonstrar, tire o atrito.** Ninguém quer criar conta para testar um projeto de portfólio. O modo demo entra sozinho numa conta com dados, e o login de verdade continua a um `APP_DEMO_ENABLED=false` de distância.
+
+- **IA como par exige revisão de verdade.** A IA escreve rápido, e também erra rápido: o alerta de orçamento saiu errado no arredondamento, o modelo respondeu duas vezes na mesma mensagem do WhatsApp, o menu do celular ficou no topo. Só apareceu porque eu rodei e testei tudo. Sem revisar, eu teria entregue bug com cara de pronto.
 
 - **Testar com a minha própria voz achou bug.** O Gravador do Windows salva um `.m4a` que não é m4a; a API dava 500. Virou uma mensagem explicando o que fazer, e o frontend gravando em `webm` eliminou o problema de vez.
 

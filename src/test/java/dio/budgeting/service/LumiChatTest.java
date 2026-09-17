@@ -53,6 +53,25 @@ class LumiChatTest {
     }
 
     @Test
+    void should_dropTheOpeningSentence_when_modelRepeatsItAfterTheToolCall() {
+        var duplicated = "Neste mês, você gastou mil reais. O maior gasto foi no mercado."
+                + "Neste mês, você gastou mil reais. O maior gasto foi no mercado, depois moradia.";
+
+        assertThat(LumiChat.dropRepeatedOpening(duplicated))
+                .isEqualTo("Neste mês, você gastou mil reais. O maior gasto foi no mercado, depois moradia.");
+    }
+
+    @Test
+    void should_keepAnswerUntouched_when_nothingRepeats() {
+        assertThat(LumiChat.dropRepeatedOpening("Cinquenta reais na farmácia, registrado."))
+                .isEqualTo("Cinquenta reais na farmácia, registrado.");
+        assertThat(LumiChat.dropRepeatedOpening("Registrei. Você já usou oitenta por cento do limite. Fique de olho."))
+                .isEqualTo("Registrei. Você já usou oitenta por cento do limite. Fique de olho.");
+        assertThat(LumiChat.dropRepeatedOpening("")).isEmpty();
+        assertThat(LumiChat.dropRepeatedOpening(null)).isNull();
+    }
+
+    @Test
     void should_clearOnlyThatConversation_when_forgetting() {
         var lumi = new LumiChat(chatClient, chatMemory, new ByteArrayResource("x".getBytes()));
 
