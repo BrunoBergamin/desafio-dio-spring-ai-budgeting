@@ -9,8 +9,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Base64;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Recebe a mensagem do WhatsApp, descobre de quem e, manda para a Lumi e responde.
@@ -31,6 +34,18 @@ public class WhatsAppService {
     private final AssistantService assistantService;
     private final UserRepository userRepository;
     private final WhatsAppProperties properties;
+
+    /**
+     * Ids das mensagens que a propria Lumi enviou. No chat "Voce" (mensagem para si mesmo) a resposta dela
+     * tambem volta pelo webhook como fromMe: sem isso ela responderia a si mesma para sempre.
+     */
+    private final Set<String> sentMessageIds = Collections.newSetFromMap(Collections.synchronizedMap(
+            new LinkedHashMap<>(256, 0.75f, false) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
+                    return size() > 500;
+                }
+            }));
 
     /** Roda fora da thread do webhook: a Evolution espera o 200 em poucos segundos e a Lumi demora mais. */
     @Async
@@ -54,14 +69,24 @@ public class WhatsAppService {
         var data = asMap(payload.get("data"));
         var key = asMap(data.get("key"));
         var remoteJid = str(key.get("remoteJid"));
-        if (Boolean.TRUE.equals(key.get("fromMe")) || remoteJid == null
-                || remoteJid.endsWith("@g.us") || remoteJid.contains("broadcast")) {
-            return Optional.empty(); // minhas proprias mensagens, grupos e status
+        if (remoteJid == null || remoteJid.endsWith("@g.us") || remoteJid.contains("broadcast")) {
+            return Optional.empty(); // grupos e status
         }
         var phone = phoneFrom(key);
         if (phone == null) {
             log.warn("[whatsapp] mensagem sem número identificável: remoteJid={}", remoteJid);
             return Optional.empty();
+        }
+        if (Boolean.TRUE.equals(key.get("fromMe"))) {
+            // Mensagem enviada pelo proprio WhatsApp pareado. So interessa o chat "Voce" (mensagem para si mesmo):
+            // o que voce manda para outras pessoas nao e da conta da Lumi.
+            var owner = digits(str(payload.get("sender")));
+            if (owner == null || !owner.equals(phone)) {
+                return Optional.empty();
+            }
+            if (sentMessageIds.contains(str(key.get("id")))) {
+                return Optional.empty(); // eco da resposta que a propria Lumi acabou de mandar
+            }
         }
         var message = asMap(data.get("message"));
         var text = str(message.get("conversation"));
@@ -84,7 +109,7 @@ public class WhatsAppService {
             // e responder a estranhos so faz sentido com um numero dedicado a Lumi (app.whatsapp.reply-unknown=true)
             log.info("[whatsapp] mensagem de número não vinculado ignorada: {}", EvolutionApiGateway.mask(incoming.phone()));
             if (properties.replyUnknown()) {
-                gateway.sendText(incoming.phone(), UNKNOWN_NUMBER_REPLY);
+                remember(gateway.sendText(incoming.phone(), UNKNOWN_NUMBER_REPLY));
             }
             return;
         }
@@ -95,7 +120,7 @@ public class WhatsAppService {
                     ? Base64.getDecoder().decode(incoming.base64())
                     : gateway.downloadMedia(incoming.key()).map(WhatsAppGateway.Media::bytes).orElse(null);
             if (bytes == null) {
-                gateway.sendText(incoming.phone(), "Não consegui baixar o seu áudio. Pode mandar de novo?");
+                remember(gateway.sendText(incoming.phone(), "Não consegui baixar o seu áudio. Pode mandar de novo?"));
                 return;
             }
             // WhatsApp grava em ogg/opus, formato que o Whisper aceita direto
@@ -105,9 +130,26 @@ public class WhatsAppService {
         } else {
             answer = assistantService.chat(userId, CONVERSATION, incoming.text()).answer();
         }
-        gateway.sendText(incoming.phone(), answer);
+        remember(gateway.sendText(incoming.phone(), answer));
         // No perfil OpenAI a Lumi tambem responde falando; na Groq nao ha text-to-speech
-        assistantService.speak(answer).ifPresent(mp3 -> gateway.sendAudio(incoming.phone(), mp3));
+        assistantService.speak(answer).ifPresent(mp3 -> remember(gateway.sendAudio(incoming.phone(), mp3)));
+    }
+
+    private void remember(String messageId) {
+        if (messageId != null) {
+            sentMessageIds.add(messageId);
+        }
+    }
+
+    /** "5519999999999@s.whatsapp.net" ou "5519999999999:12@s.whatsapp.net" -> "5519999999999". */
+    static String digits(String jid) {
+        if (jid == null || !jid.contains("@")) {
+            return null;
+        }
+        var user = jid.substring(0, jid.indexOf('@'));
+        var colon = user.indexOf(':');
+        var value = (colon >= 0 ? user.substring(0, colon) : user).replaceAll("\\D", "");
+        return value.isEmpty() ? null : value;
     }
 
     /** Numero do contato: "5519999999999@s.whatsapp.net" -> "5519999999999". Com LID, a Evolution manda o numero em remoteJidAlt. */

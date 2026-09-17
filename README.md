@@ -89,13 +89,15 @@ A mesma Lumi atende pelo WhatsApp: você manda um áudio ou um texto e ela regis
 docker compose --profile whatsapp up --build
 ```
 
-1. Abra a página **WhatsApp** do site, clique em **Gerar QR code** e escaneie com o celular (WhatsApp → Aparelhos conectados). Use um chip que não seja o seu pessoal.
-2. Ainda na página, **vincule o seu número** à conta. Mensagens de números não vinculados são **ignoradas em silêncio**: o WhatsApp pareado recebe mensagem de todo mundo, e a Lumi não pode sair respondendo aos seus contatos. (Com um chip exclusivo da Lumi, `WHATSAPP_REPLY_UNKNOWN=true` faz ela responder com um convite para se cadastrar.)
-3. Mande "gastei 30 reais na farmácia" (texto ou áudio) para o número conectado.
+1. Abra a página **WhatsApp** do site, clique em **Gerar QR code** e escaneie com o seu celular (WhatsApp → Aparelhos conectados).
+2. Ainda na página, **vincule o seu próprio número** à conta.
+3. No WhatsApp, abra o chat **"Você"** (mensagem para mim mesmo) e mande "gastei 30 reais na farmácia", em texto ou áudio. A Lumi responde ali mesmo.
+
+Foi pensado para o seu WhatsApp pessoal: a Lumi só age no chat com você mesmo. O que você manda para outras pessoas, e o que elas mandam para você, é ignorado em silêncio. (Com um chip exclusivo da Lumi, `WHATSAPP_REPLY_UNKNOWN=true` faz ela responder a desconhecidos com um convite para se cadastrar.)
 
 ![Página WhatsApp: vincular o número e QR code gerado pela Evolution API](docs/images/ui-whatsapp.png)
 
-Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento `messages.upsert`, responde `202` na hora e processa em segundo plano (`@Async`); o áudio chega em base64 (`ogg/opus`, aceito direto pelo Whisper); o número vira o usuário pela tabela `users.phone`; a resposta volta por `POST /message/sendText` (e em áudio, no perfil OpenAI). A conversa do WhatsApp tem memória própria, separada da do site. O provedor fica atrás da interface `WhatsAppGateway`: trocar a Evolution pela **API oficial da Meta** é escrever outra implementação, e mais nada.
+Como funciona por dentro: `POST /api/whatsapp/webhook/{segredo}` recebe o evento `messages.upsert`, responde `202` na hora e processa em segundo plano (`@Async`); o áudio chega em base64 (`ogg/opus`, aceito direto pelo Whisper); o número vira o usuário pela tabela `users.phone`; a resposta volta por `POST /message/sendText` (e em áudio, no perfil OpenAI). No chat "Você" a própria resposta da Lumi volta pelo webhook como se fosse sua: a aplicação guarda os ids do que enviou e ignora o eco, senão ela conversaria consigo mesma para sempre. A conversa do WhatsApp tem memória própria, separada da do site. O provedor fica atrás da interface `WhatsAppGateway`: trocar a Evolution pela **API oficial da Meta** é escrever outra implementação, e mais nada.
 
 > **Escolha consciente:** a Evolution não é a API oficial (usa o WhatsApp Web por baixo) e a Meta pode bloquear o número. Para demonstração e portfólio ela é imbatível: grátis, local, sem cadastro de empresa. Para produção, a implementação oficial entra no lugar sem mexer no resto.
 
