@@ -59,21 +59,28 @@ public class EvolutionApiGateway implements WhatsAppGateway {
     }
 
     @Override
-    public void sendText(String phone, String text) {
-        client.post().uri("/message/sendText/{instance}", properties.instance())
+    public String sendText(String phone, String text) {
+        var body = client.post().uri("/message/sendText/{instance}", properties.instance())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("number", phone, "text", text))
-                .retrieve().toBodilessEntity();
+                .retrieve().body(MAP);
         log.info("[whatsapp] texto enviado para {}", mask(phone));
+        return messageId(body);
     }
 
     @Override
-    public void sendAudio(String phone, byte[] mp3) {
-        client.post().uri("/message/sendWhatsAppAudio/{instance}", properties.instance())
+    public String sendAudio(String phone, byte[] mp3) {
+        var body = client.post().uri("/message/sendWhatsAppAudio/{instance}", properties.instance())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("number", phone, "audio", Base64.getEncoder().encodeToString(mp3)))
-                .retrieve().toBodilessEntity();
+                .retrieve().body(MAP);
         log.info("[whatsapp] áudio enviado para {}", mask(phone));
+        return messageId(body);
+    }
+
+    /** A Evolution devolve a mensagem enviada no formato do Baileys: {key: {id, remoteJid, fromMe}, ...}. */
+    private static String messageId(Map<String, Object> body) {
+        return body == null ? null : str(asMap(body.get("key")).get("id"));
     }
 
     @Override

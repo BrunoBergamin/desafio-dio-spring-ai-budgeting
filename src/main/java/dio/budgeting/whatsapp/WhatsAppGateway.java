@@ -14,9 +14,10 @@ public interface WhatsAppGateway {
 
     ConnectionInfo status();
 
-    void sendText(String phone, String text);
+    /** Envia e devolve o id da mensagem (para reconhecer o proprio eco no webhook). Nulo se o provedor nao informar. */
+    String sendText(String phone, String text);
 
-    void sendAudio(String phone, byte[] mp3);
+    String sendAudio(String phone, byte[] mp3);
 
     /** Baixa a midia de uma mensagem recebida quando ela nao veio em base64 no webhook. */
     Optional<Media> downloadMedia(Map<String, Object> messageKey);

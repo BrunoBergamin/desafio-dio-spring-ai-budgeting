@@ -33,9 +33,12 @@ class WhatsAppServiceTest {
     @Mock WhatsAppProperties properties;
     @InjectMocks WhatsAppService service;
 
+    static final String FRIEND = "5511888888888";
+
     @Test
-    void should_ignoreOwnMessagesGroupsAndOtherEvents() {
-        assertThat(service.parse(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", true), text("oi")))).isEmpty();
+    void should_ignoreMessagesISendToOtherPeople_GroupsAndOtherEvents() {
+        // fromMe para um amigo: nao e o chat "Voce", a Lumi nao se mete
+        assertThat(service.parse(payload("messages.upsert", key(FRIEND + "@s.whatsapp.net", true), text("oi")))).isEmpty();
         assertThat(service.parse(payload("messages.upsert", key("123@g.us", false), text("oi")))).isEmpty();
         assertThat(service.parse(payload("connection.update", key(PHONE + "@s.whatsapp.net", false), text("oi")))).isEmpty();
         assertThat(service.parse(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", false), Map.of("stickerMessage", Map.of())))).isEmpty();
@@ -48,6 +51,38 @@ class WhatsAppServiceTest {
         assertThat(incoming.phone()).isEqualTo(PHONE);
         assertThat(incoming.text()).isEqualTo("gastei 10 reais");
         assertThat(incoming.audio()).isFalse();
+    }
+
+    @Test
+    void should_acceptMessageToMyself_when_chatIsTheOwnerNumber() {
+        // Chat "Voce": fromMe = true e remoteJid = o proprio numero pareado (sender do webhook)
+        var incoming = service.parse(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", true), text("gastei 30 na farmácia"))).orElseThrow();
+
+        assertThat(incoming.phone()).isEqualTo(PHONE);
+        assertThat(incoming.text()).isEqualTo("gastei 30 na farmácia");
+    }
+
+    @Test
+    void should_ignoreLumisOwnReply_when_itEchoesBackThroughTheWebhook() {
+        var user = userWithId();
+        when(userRepository.findByPhone(PHONE)).thenReturn(Optional.of(user));
+        when(assistantService.chat(any(), any(), any())).thenReturn(new AssistantResponse(null, "Registrei.", "whatsapp"));
+        when(assistantService.speak(any())).thenReturn(Optional.empty());
+        when(gateway.sendText(PHONE, "Registrei.")).thenReturn("MSG-DA-LUMI");
+
+        service.handle(payload("messages.upsert", key(PHONE + "@s.whatsapp.net", true), text("gastei 10")));
+        // ... e a propria resposta volta pelo webhook, com o mesmo id
+        var echo = Map.<String, Object>of("remoteJid", PHONE + "@s.whatsapp.net", "fromMe", true, "id", "MSG-DA-LUMI");
+        assertThat(service.parse(payload("messages.upsert", echo, text("Registrei.")))).isEmpty();
+
+        verify(assistantService, times(1)).chat(any(), any(), any());
+    }
+
+    @Test
+    void should_stripDeviceSuffix_when_readingTheOwnerJid() {
+        assertThat(WhatsAppService.digits("5519999999999:12@s.whatsapp.net")).isEqualTo("5519999999999");
+        assertThat(WhatsAppService.digits("5519999999999@s.whatsapp.net")).isEqualTo("5519999999999");
+        assertThat(WhatsAppService.digits(null)).isNull();
     }
 
     @Test
@@ -134,8 +169,10 @@ class WhatsAppServiceTest {
         verify(gateway).sendText(PHONE, "Oi!");
     }
 
+    /** O webhook da Evolution traz em "sender" o numero do WhatsApp pareado (o dono da instancia). */
     private static Map<String, Object> payload(String event, Map<String, Object> key, Map<String, Object> message) {
-        return Map.of("event", event, "instance", "lumi", "data", Map.of("key", key, "pushName", "Bruno", "message", message));
+        return Map.of("event", event, "instance", "lumi", "sender", PHONE + "@s.whatsapp.net",
+                "data", Map.of("key", key, "pushName", "Bruno", "message", message));
     }
 
     private static Map<String, Object> key(String remoteJid, boolean fromMe) {
