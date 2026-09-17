@@ -11,6 +11,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param instance      nome da instancia (uma por numero conectado)
  * @param webhookSecret segredo que protege o webhook, vai no caminho da URL
  * @param webhookUrl    URL que a Evolution chama (dentro do compose: http://app:8080/api/whatsapp/webhook/{segredo})
+ * @param replyUnknown  responder a numeros nao vinculados com um convite. Padrao false: o WhatsApp pareado recebe
+ *                      mensagens de TODO MUNDO, e responder a estranhos vira spam (so ligue com um chip dedicado a Lumi)
  */
 @ConfigurationProperties("app.whatsapp")
 public record WhatsAppProperties(boolean enabled,
@@ -18,7 +20,8 @@ public record WhatsAppProperties(boolean enabled,
                                  String apiKey,
                                  String instance,
                                  String webhookSecret,
-                                 String webhookUrl) {
+                                 String webhookUrl,
+                                 boolean replyUnknown) {
 
     public WhatsAppProperties {
         if (enabled) {

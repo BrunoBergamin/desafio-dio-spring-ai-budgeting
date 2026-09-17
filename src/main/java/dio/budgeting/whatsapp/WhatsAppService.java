@@ -30,6 +30,7 @@ public class WhatsAppService {
     private final WhatsAppGateway gateway;
     private final AssistantService assistantService;
     private final UserRepository userRepository;
+    private final WhatsAppProperties properties;
 
     /** Roda fora da thread do webhook: a Evolution espera o 200 em poucos segundos e a Lumi demora mais. */
     @Async
@@ -79,8 +80,12 @@ public class WhatsAppService {
     private void reply(IncomingMessage incoming) {
         var user = userRepository.findByPhone(incoming.phone());
         if (user.isEmpty()) {
-            log.info("[whatsapp] número não vinculado: {}", EvolutionApiGateway.mask(incoming.phone()));
-            gateway.sendText(incoming.phone(), UNKNOWN_NUMBER_REPLY);
+            // Quem nao esta vinculado e ignorado: o WhatsApp pareado recebe mensagens de qualquer pessoa,
+            // e responder a estranhos so faz sentido com um numero dedicado a Lumi (app.whatsapp.reply-unknown=true)
+            log.info("[whatsapp] mensagem de número não vinculado ignorada: {}", EvolutionApiGateway.mask(incoming.phone()));
+            if (properties.replyUnknown()) {
+                gateway.sendText(incoming.phone(), UNKNOWN_NUMBER_REPLY);
+            }
             return;
         }
         var userId = user.get().getId();
