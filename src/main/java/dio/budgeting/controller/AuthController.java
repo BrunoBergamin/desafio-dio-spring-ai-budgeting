@@ -38,6 +38,16 @@ public class AuthController {
         return authService.register(request);
     }
 
+    @Operation(summary = "Entra na conta de demonstração, sem senha (só com APP_DEMO_ENABLED=true)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Token da conta demo"),
+            @ApiResponse(responseCode = "404", description = "Modo demo desligado", content = @Content)
+    })
+    @PostMapping("/demo")
+    public AuthResponse demo() {
+        return authService.demoLogin();
+    }
+
     @Operation(summary = "Entra com e-mail e senha e recebe o token")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Token emitido"),

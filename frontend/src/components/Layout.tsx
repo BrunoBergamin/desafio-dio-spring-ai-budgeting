@@ -14,7 +14,7 @@ const initials = (name?: string) =>
   (name ?? '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, demo } = useAuth();
   const { theme, toggle } = useTheme();
   return (
     <div className="shell">
@@ -36,7 +36,11 @@ export function Layout() {
           </button>
           <span className="avatar" title={user?.email}>{initials(user?.name)}</span>
           <span className="user-name">{user?.name}</span>
-          <button className="btn ghost small" onClick={logout}>Sair</button>
+          {demo ? (
+            <span className="pill" title="conta de demonstração, com dados fictícios">modo demo</span>
+          ) : (
+            <button className="btn ghost small" onClick={logout}>Sair</button>
+          )}
         </div>
       </header>
       <main className="content">

@@ -34,10 +34,29 @@ class AuthServiceTest {
     @Mock JwtService jwtService;
 
     AuthService service;
+    dio.budgeting.demo.DemoProperties demo = new dio.budgeting.demo.DemoProperties(true, "demo@lumi.local", "lumi-demo-1234", "Demo");
 
     @BeforeEach
     void setUp() {
-        service = new AuthService(userRepository, passwordEncoder, authenticationManager, jwtService, new UserMapper());
+        service = new AuthService(userRepository, passwordEncoder, authenticationManager, jwtService, new UserMapper(), demo);
+    }
+
+    @Test
+    void should_issueTokenForDemoAccount_when_demoIsEnabled() {
+        var user = new User("Demo", "demo@lumi.local", "hash");
+        when(userRepository.findByEmail("demo@lumi.local")).thenReturn(Optional.of(user));
+        when(jwtService.generate(user)).thenReturn("token-demo");
+
+        assertThat(service.demoLogin().token()).isEqualTo("token-demo");
+    }
+
+    @Test
+    void should_refuseDemoLogin_when_demoIsDisabled() {
+        var off = new AuthService(userRepository, passwordEncoder, authenticationManager, jwtService, new UserMapper(),
+                new dio.budgeting.demo.DemoProperties(false, null, null, null));
+
+        assertThatThrownBy(off::demoLogin).isInstanceOf(dio.budgeting.exception.ResourceNotFoundException.class);
+        verifyNoInteractions(jwtService);
     }
 
     @Test

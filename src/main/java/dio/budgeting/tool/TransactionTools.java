@@ -32,6 +32,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TransactionTools {
 
+    /** Tudo que a ferramenta devolve entra no prompt do modelo: limite para não estourar tokens nem memória. */
+    static final int MAX_LISTED = 50;
+
     private final TransactionService transactionService;
     private final ExpenseService expenseService;
 
@@ -50,7 +53,9 @@ public class TransactionTools {
         return expenseService.register(userId, new TransactionRequest(description, amount, category, parseDate(date)));
     }
 
-    @Tool(name = "listar_transacoes", description = "Lista gastos, com filtros opcionais de categoria e período")
+    @Tool(name = "listar_transacoes",
+            description = "Lista gastos, com filtros opcionais de categoria e período. Devolve no máximo "
+                    + MAX_LISTED + " lançamentos, dos mais recentes para os mais antigos; para totais use resumo_de_gastos")
     public List<TransactionResponse> listTransactions(
             @ToolParam(description = "Categoria para filtrar", required = false) Category category,
             @ToolParam(description = "Data inicial AAAA-MM-DD", required = false) String start,
@@ -58,7 +63,9 @@ public class TransactionTools {
             ToolContext toolContext) {
         var userId = ToolUser.require(toolContext);
         log.info("[tool] listar_transacoes user={} category={} start={} end={}", userId, category, start, end);
-        return transactionService.list(userId, category, parseDate(start), parseDate(end));
+        return transactionService.list(userId, category, parseDate(start), parseDate(end)).stream()
+                .limit(MAX_LISTED)
+                .toList();
     }
 
     @Tool(name = "ultimas_transacoes", description = "Retorna as 5 transações mais recentes")

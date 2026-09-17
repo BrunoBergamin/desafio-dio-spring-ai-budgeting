@@ -34,6 +34,7 @@ public class WhatsAppService {
     private final AssistantService assistantService;
     private final UserRepository userRepository;
     private final WhatsAppProperties properties;
+    private final dio.budgeting.demo.DemoProperties demoProperties;
 
     /**
      * Ids das mensagens que a propria Lumi enviou. No chat "Voce" (mensagem para si mesmo) a resposta dela
@@ -98,12 +99,21 @@ public class WhatsAppService {
             return Optional.empty(); // figurinha, imagem, etc.
         }
         var base64 = str(message.get("base64"));
+        var selfChat = Boolean.TRUE.equals(key.get("fromMe"));
         return Optional.of(new IncomingMessage(phone, str(data.get("pushName")), text, !audio.isEmpty(),
-                str(audio.get("mimetype")), base64, key));
+                str(audio.get("mimetype")), base64, key, selfChat));
     }
 
     private void reply(IncomingMessage incoming) {
         var user = userRepository.findByPhone(incoming.phone());
+        if (user.isEmpty() && incoming.selfChat() && demoProperties.enabled()) {
+            // Modo demo: a primeira mensagem que voce manda para si mesmo vincula o numero pareado a conta demo
+            user = userRepository.findByEmail(demoProperties.email()).map(demo -> {
+                demo.linkPhone(incoming.phone());
+                log.info("[whatsapp] número pareado vinculado à conta demo: {}", EvolutionApiGateway.mask(incoming.phone()));
+                return userRepository.save(demo);
+            });
+        }
         if (user.isEmpty()) {
             // Quem nao esta vinculado e ignorado: o WhatsApp pareado recebe mensagens de qualquer pessoa,
             // e responder a estranhos so faz sentido com um numero dedicado a Lumi (app.whatsapp.reply-unknown=true)
@@ -167,7 +177,7 @@ public class WhatsAppService {
     }
 
     record IncomingMessage(String phone, String pushName, String text, boolean audio, String mimetype,
-                           String base64, Map<String, Object> key) {
+                           String base64, Map<String, Object> key, boolean selfChat) {
     }
 
     @SuppressWarnings("unchecked")

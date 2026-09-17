@@ -38,6 +38,14 @@ export function ChatPage() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
 
+  /** Cada audio da conversa vira um blob URL na memoria do navegador; ao sair da pagina, libera todos. */
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  useEffect(
+    () => () => messagesRef.current.forEach((m) => m.audioUrl && URL.revokeObjectURL(m.audioUrl)),
+    [],
+  );
+
   const ask = async (text: string) => {
     if (!text.trim() || busy) return;
     setInput('');
