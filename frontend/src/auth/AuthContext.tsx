@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { authApi } from '../api/endpoints';
-import { clearToken, readToken, saveToken } from '../api/client';
 import type { AuthResponse, UserResponse } from '../api/types';
 
 interface AuthState {
@@ -13,18 +12,14 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | null>(null);
+/** Só marca que a sessão veio do modo demo, para a interface avisar. Não é dado sensível. */
 const DEMO_KEY = 'lumi.demo';
 
-/** Le o "exp" do JWT sem biblioteca: e so o payload em base64url. */
-function isExpired(token: string): boolean {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    return typeof payload.exp === 'number' && payload.exp * 1000 < Date.now();
-  } catch {
-    return true;
-  }
-}
-
+/**
+ * Quem está logado é decidido pelo servidor: o token vive num cookie HttpOnly que o JavaScript não lê.
+ * Então a abertura do site pergunta "quem sou eu?" em /auth/me e, se ninguém responder, tenta a conta
+ * de demonstração. Sem o cookie e sem demo, cai na tela de login.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,25 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const accept = useCallback((auth: AuthResponse, isDemo: boolean) => {
-    saveToken(auth.token);
     setUser(auth.user);
     setDemo(isDemo);
     try { localStorage.setItem(DEMO_KEY, isDemo ? '1' : '0'); } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
-    const token = readToken();
-    if (token && !isExpired(token)) {
-      authApi.me().then(setUser).catch(() => clearToken()).finally(() => setLoading(false));
-      return;
-    }
-    clearToken();
-    // Sem token: tenta a conta de demonstracao. Se o servidor estiver com o modo demo desligado (404),
-    // cai na tela de login normal.
-    authApi.demo()
-      .then((auth) => accept(auth, true))
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    authApi.me()
+      .then((me) => { if (!cancelled) setUser(me); })
+      // Sem sessão: tenta a conta de demonstração. Com o modo demo desligado (404), fica no login.
+      .catch(() => authApi.demo()
+        .then((auth) => { if (!cancelled) accept(auth, true); })
+        .catch(() => undefined))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [accept]);
 
   const value = useMemo<AuthState>(
@@ -62,10 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: (email, password) => authApi.login(email, password).then((a) => accept(a, false)),
       register: (name, email, password) => authApi.register(name, email, password).then((a) => accept(a, false)),
       logout: () => {
-        clearToken();
-        setUser(null);
-        setDemo(false);
-        try { localStorage.setItem(DEMO_KEY, '0'); } catch { /* ignore */ }
+        // Só o servidor apaga o cookie, porque o JavaScript não enxerga esse cookie
+        authApi.logout().catch(() => undefined).finally(() => {
+          setUser(null);
+          setDemo(false);
+          try { localStorage.setItem(DEMO_KEY, '0'); } catch { /* ignore */ }
+        });
       },
     }),
     [user, loading, demo, accept],

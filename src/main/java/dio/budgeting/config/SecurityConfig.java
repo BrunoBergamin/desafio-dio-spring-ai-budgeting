@@ -1,5 +1,6 @@
 package dio.budgeting.config;
 
+import dio.budgeting.security.CookieOrBearerTokenResolver;
 import dio.budgeting.security.ProblemDetailResponses;
 import dio.budgeting.security.RateLimitFilter;
 import dio.budgeting.security.RateLimitProperties;
@@ -33,12 +34,13 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder,
                                     ProblemDetailResponses problemResponses,
                                     RateLimitProperties rateLimit,
+                                    CookieOrBearerTokenResolver tokenResolver,
                                     @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/demo").permitAll()
+                    auth.requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/demo", "/api/auth/logout").permitAll()
                             // O webhook da Evolution nao tem JWT: e protegido pelo segredo na URL
                             .requestMatchers(HttpMethod.POST, "/api/whatsapp/webhook/**").permitAll()
                             .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
@@ -53,6 +55,8 @@ public class SecurityConfig {
                     auth.anyRequest().authenticated();
                 })
                 .oauth2ResourceServer(oauth2 -> oauth2
+                        // O site manda o token no cookie HttpOnly; Swagger e curl seguem no header
+                        .bearerTokenResolver(tokenResolver)
                         .jwt(jwt -> jwt.decoder(jwtDecoder))
                         .authenticationEntryPoint(problemResponses))
                 .exceptionHandling(handling -> handling

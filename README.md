@@ -21,7 +21,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-215%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%204%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-226%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%204%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![Cobertura](https://img.shields.io/badge/cobertura-76%25%20(JaCoCo)-success?style=flat-square)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
@@ -265,12 +265,17 @@ A tentação era criar um lançamento na categoria "poupança" quando a pessoa g
 **10. O CSV tem detalhes que só aparecem testando no Excel.**
 Exportar parecia trivial até abrir o arquivo. Sem o BOM no começo, o Excel em português lê como ANSI e "Farmácia" vira "FarmÃ¡cia". Com vírgula como separador, o valor "80,50" quebra a linha em duas colunas, então o separador é ponto e vírgula. As linhas terminam em CRLF e a ordem é do mais antigo para o mais novo, porque planilha se lê de cima para baixo no tempo, ao contrário da tela. Tudo isso está em teste, inclusive os bytes do BOM.
 
-**11. A hora "de hoje" vem de um `Clock`, não do servidor.**
+**11. O token saiu do `localStorage` e foi para um cookie que o JavaScript não lê.**
+Token no `localStorage` é confortável de programar e ruim de defender: qualquer XSS lê e leva. Agora o servidor manda o mesmo token num cookie `HttpOnly`, que o navegador guarda e reenvia sozinho. O front-end simplesmente não tem mais função de ler ou salvar token.
+
+Duas decisões vieram junto. A primeira: quem procura o token olha o header `Authorization` primeiro e o cookie depois, então Swagger, `requests.http` e curl continuam funcionando como antes, e um teste no Swagger com outra conta não é atropelado pelo cookie do site aberto na outra aba. A segunda: mantive o CSRF desligado. Com `SameSite=Strict` o navegador não manda o cookie em nada que venha de outro site, inclusive formulário HTML, que é justamente o vetor que o CORS não cobre. Um token CSRF seria uma segunda defesa para a mesma ameaça, com mais peças para quebrar no webhook da Evolution e no Swagger.
+
+**12. A hora "de hoje" vem de um `Clock`, não do servidor.**
 O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília cairia no dia seguinte, e no dia 30 o "resumo do mês" viraria o mês que vem. Existe um único bean `Clock` no fuso `America/Sao_Paulo` (`app.timezone`) e todo `LocalDate.now()` passa por ele. De quebra os testes de data ficaram determinísticos: o `TransactionServiceTest` fixa o relógio em 01:30 UTC e prova que o gasto cai no dia anterior, o de Brasília.
 
-**12. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
+**13. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
 
-**Outras:** `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o mesmo SQL servir H2 e MySQL; JWT com o suporte nativo do Spring Security (`NimbusJwtEncoder`, HS256) em vez de biblioteca extra; 401 e 403 escritos como `ProblemDetail` por um `AuthenticationEntryPoint` próprio, porque exceções de segurança acontecem antes do `@RestControllerAdvice`; frontend empacotado dentro do jar para ter uma porta só, sem CORS e um container só; token no `localStorage`, sabendo do risco de XSS (cookie `HttpOnly` seria o próximo passo); sem Kafka, porque para um app de gastos pessoais seria complexidade sem necessidade.
+**Outras:** `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o mesmo SQL servir H2 e MySQL; JWT com o suporte nativo do Spring Security (`NimbusJwtEncoder`, HS256) em vez de biblioteca extra; 401 e 403 escritos como `ProblemDetail` por um `AuthenticationEntryPoint` próprio, porque exceções de segurança acontecem antes do `@RestControllerAdvice`; frontend empacotado dentro do jar para ter uma porta só, sem CORS e um container só; token num cookie `HttpOnly` com `SameSite=Strict`, fora do alcance do JavaScript; sem Kafka, porque para um app de gastos pessoais seria complexidade sem necessidade.
 
 ---
 
@@ -297,7 +302,7 @@ O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília c
 | 17 | **Áudio em formato inesperado vira 422 explicado** (o Gravador do Windows salva AAC cru como `.m4a`). Descobri testando com a minha voz. | `AssistantService` |
 | 18 | **Erros padronizados** com `ProblemDetail` em toda a API, inclusive 401/403 da camada de segurança. | `GlobalExceptionHandler`, `ProblemDetailResponses` |
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
-| 20 | **225 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA) e cobertura com JaCoCo. | `src/test` |
+| 20 | **236 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA) e cobertura com JaCoCo. | `src/test` |
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, chat "Você", áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
 | 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. | `Category` |
 | 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
@@ -396,7 +401,8 @@ Resposta real do passo 3 (o texto varia conforme o modelo):
 | Método | Rota | Descrição |
 |-------|------|-----------|
 | POST | `/api/auth/demo` | Token da conta de demonstração, sem senha (público; 404 com o modo demo desligado) |
-| POST | `/api/auth/register` · `/api/auth/login` | Conta e token JWT (público) |
+| POST | `/api/auth/register` · `/api/auth/login` | Conta e token JWT, no corpo e num cookie `HttpOnly` (público) |
+| POST | `/api/auth/logout` | Apaga o cookie do token (público) |
 | GET | `/api/auth/me` | Usuário autenticado |
 | POST/GET | `/api/transactions` | Registra gasto ou receita · lista paginada (`?type=&category=&start=&end=&page=0&size=50`, teto de 500) |
 | GET | `/api/transactions/export.csv` | Baixa os lançamentos do período em CSV (abre no Excel em português) |
@@ -426,7 +432,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 215 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
+./mvnw test      # 226 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
 ./mvnw verify    # + 4 num MySQL real (Testcontainers, precisa do Docker) + 9 de ponta a ponta com a IA
                  #   (os de IA só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir no ambiente)
 ```
@@ -434,6 +440,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 | Classe | Tipo | O que garante |
 |-------|------|---------------|
 | `TransactionServiceTest`, `BudgetServiceTest`, `ExpenseServiceTest` | Unitário | validações, 404 para dado de outra pessoa, total/percentual, **fronteiras 80%/100% do orçamento**, alerta no registro, **saldo com receitas e saldo negativo**, categoria de receita recusada no orçamento, data certa no fuso de Brasília |
+| `CookieOrBearerTokenResolverTest` | Unitário | header vence o cookie, cookie sozinho autentica, cookie vazio é ignorado, `Secure` só em https, `HttpOnly` e `SameSite=Strict` no cookie emitido |
 | `AuthServiceTest`, `JwtServiceTest` | Unitário | cadastro, e-mail duplicado, credencial inválida → 401, login demo (e recusa com o modo desligado), token com `sub` = id, assinatura com outra chave falha |
 | `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest`, `BoundedChatMemoryRepositoryTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, resposta duplicada pelo modelo limpa, formatos de áudio, TTS desligado, conversa mais antiga descartada ao passar do limite |
 | `TransactionToolsTest`, `BudgetToolsTest`, `RecurringToolsTest` | Unitário | ferramentas expostas, **`userId` fora do schema**, `userId` falso do modelo ignorado, erro claro sem contexto |
@@ -447,7 +454,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 | `MySqlMigrationsIT` (4) | Testcontainers, MySQL 9.6 real | as 5 migrations rodam no MySQL (não só no H2), agregação por categoria, **busca com filtros nulos** (`:type is null or ...`, que o H2 aceita e o MySQL poderia recusar), `UNIQUE` de e-mail e de orçamento; pulado sem Docker |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **215 no backend + 13 no frontend** sem chave; **225** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
+Resultado local: **226 no backend + 13 no frontend** sem chave; **236** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
 
 **Cobertura (JaCoCo).** O `./mvnw verify` gera `target/site/jacoco/index.html` e falha se a cobertura de linhas cair abaixo de 70%. A medição é só onde mora regra de negócio (`service`, `tool`, `security`, `mapper`, `whatsapp`): DTO, entidade e configuração são declarativos e só inflariam o número. Hoje está em **76%**, e a parte menos coberta é o cliente HTTP da Evolution, que precisaria de um servidor falso para valer a pena.
 
@@ -512,7 +519,6 @@ O que é meu de verdade: as escolhas, os testes com a minha voz e o meu WhatsApp
 - **Conexão com o banco (Open Finance):** importar os lançamentos da conta e do cartão pela API do banco e deixar a Lumi só classificar e comentar. O `ExpenseService` já é o ponto único de entrada de um gasto, então a importação seria mais uma porta, como o WhatsApp foi.
 - **API oficial do WhatsApp (Meta Cloud API):** outra implementação de `WhatsAppGateway`, sem mexer no resto.
 - **Memória de conversa em banco** (`JdbcChatMemoryRepository`) para sobreviver ao restart e a várias instâncias.
-- **Token em cookie `HttpOnly`** no lugar do `localStorage`.
 
 ---
 

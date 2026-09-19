@@ -2,6 +2,7 @@ package dio.budgeting.support;
 
 import dio.budgeting.config.JwtConfig;
 import dio.budgeting.config.SecurityConfig;
+import dio.budgeting.security.CookieOrBearerTokenResolver;
 import dio.budgeting.security.CurrentUserProvider;
 import dio.budgeting.security.ProblemDetailResponses;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -20,7 +21,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @WebMvcTest
-@Import({SecurityConfig.class, JwtConfig.class, ProblemDetailResponses.class, CurrentUserProvider.class})
+@Import({SecurityConfig.class, JwtConfig.class, ProblemDetailResponses.class, CurrentUserProvider.class,
+        CookieOrBearerTokenResolver.class})
 public @interface SecuredWebMvcTest {
 
     @AliasFor(annotation = WebMvcTest.class, attribute = "controllers")

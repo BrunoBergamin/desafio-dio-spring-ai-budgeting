@@ -4,6 +4,7 @@ import dio.budgeting.dto.request.LoginRequest;
 import dio.budgeting.dto.request.RegisterRequest;
 import dio.budgeting.dto.response.AuthResponse;
 import dio.budgeting.dto.response.UserResponse;
+import dio.budgeting.security.AuthCookies;
 import dio.budgeting.security.CurrentUserProvider;
 import dio.budgeting.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,8 +13,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,8 +38,9 @@ public class AuthController {
     })
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public AuthResponse register(@Valid @RequestBody RegisterRequest request,
+                                 HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        return withCookie(authService.register(request), httpRequest, httpResponse);
     }
 
     @Operation(summary = "Entra na conta de demonstração, sem senha (só com APP_DEMO_ENABLED=true)")
@@ -44,8 +49,8 @@ public class AuthController {
             @ApiResponse(responseCode = "404", description = "Modo demo desligado", content = @Content)
     })
     @PostMapping("/demo")
-    public AuthResponse demo() {
-        return authService.demoLogin();
+    public AuthResponse demo(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        return withCookie(authService.demoLogin(), httpRequest, httpResponse);
     }
 
     @Operation(summary = "Entra com e-mail e senha e recebe o token")
@@ -54,8 +59,26 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "E-mail ou senha incorretos", content = @Content)
     })
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public AuthResponse login(@Valid @RequestBody LoginRequest request,
+                              HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        return withCookie(authService.login(request), httpRequest, httpResponse);
+    }
+
+    @Operation(summary = "Sai da conta: apaga o cookie do token")
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        httpResponse.addHeader(HttpHeaders.SET_COOKIE, AuthCookies.clear(httpRequest).toString());
+    }
+
+    /**
+     * Devolve o token no corpo, para Swagger e curl, e tambem no cookie HttpOnly, que e o que o site usa.
+     * Assim o JavaScript da pagina nunca precisa tocar no token.
+     */
+    private AuthResponse withCookie(AuthResponse auth, HttpServletRequest request, HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                AuthCookies.issue(auth.token(), auth.expiresIn(), request).toString());
+        return auth;
     }
 
     public record PhoneRequest(
