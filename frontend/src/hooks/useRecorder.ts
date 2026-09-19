@@ -23,7 +23,9 @@ export function useRecorder(onReady: (recording: Recording) => void) {
   const timerRef = useRef<number | null>(null);
 
   const stop = useCallback(() => {
-    recorderRef.current?.state === 'recording' && recorderRef.current.stop();
+    if (recorderRef.current?.state === 'recording') {
+      recorderRef.current.stop();
+    }
   }, []);
 
   const start = useCallback(async () => {

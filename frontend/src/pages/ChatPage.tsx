@@ -40,7 +40,7 @@ export function ChatPage() {
 
   /** Cada audio da conversa vira um blob URL na memoria do navegador; ao sair da pagina, libera todos. */
   const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(
     () => () => messagesRef.current.forEach((m) => m.audioUrl && URL.revokeObjectURL(m.audioUrl)),
     [],

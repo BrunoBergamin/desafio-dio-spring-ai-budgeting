@@ -26,7 +26,8 @@ describe('format', () => {
   });
 
   it('formata dinheiro e data para pt-BR', () => {
-    expect(money(1234.5).replace(/ /g, ' ')).toBe('R$ 1.234,50');
+    // O Intl separa "R$" do valor com um espaco sem quebra; o \s cobre os dois tipos de espaco
+    expect(money(1234.5).replace(/\s/g, ' ')).toBe('R$ 1.234,50');
     expect(shortDate('2026-09-16')).toBe('16/09/2026');
   });
 });

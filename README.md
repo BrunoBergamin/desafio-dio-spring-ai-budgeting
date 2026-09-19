@@ -21,7 +21,8 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-121%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%203%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-136%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%203%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Cobertura](https://img.shields.io/badge/cobertura-73%25%20(JaCoCo)-success?style=flat-square)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -284,7 +285,7 @@ O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília c
 | 17 | **Áudio em formato inesperado vira 422 explicado** (o Gravador do Windows salva AAC cru como `.m4a`). Descobri testando com a minha voz. | `AssistantService` |
 | 18 | **Erros padronizados** com `ProblemDetail` em toda a API, inclusive 401/403 da camada de segurança. | `GlobalExceptionHandler`, `ProblemDetailResponses` |
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
-| 20 | **133 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA). | `src/test` |
+| 20 | **145 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA) e cobertura com JaCoCo. | `src/test` |
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, chat "Você", áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
 | 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. | `Category` |
 | 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
@@ -406,7 +407,7 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 121 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
+./mvnw test      # 136 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
 ./mvnw verify    # + 3 num MySQL real (Testcontainers, precisa do Docker) + 9 de ponta a ponta com a IA
                  #   (os de IA só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir no ambiente)
 ```
@@ -424,7 +425,13 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 | `MySqlMigrationsIT` (3) | Testcontainers, MySQL 9.6 real | as 4 migrations rodam no MySQL (não só no H2), agregação por categoria em JPQL, `UNIQUE` de e-mail e de orçamento; pulado sem Docker |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **121 no backend + 10 no frontend** sem chave; **130** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
+Resultado local: **136 no backend + 10 no frontend** sem chave; **145** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
+
+**Cobertura (JaCoCo).** O `./mvnw verify` gera `target/site/jacoco/index.html` e falha se a cobertura de linhas cair abaixo de 70%. A medição é só onde mora regra de negócio (`service`, `tool`, `security`, `mapper`, `whatsapp`): DTO, entidade e configuração são declarativos e só inflariam o número. Hoje está em **73%**, e a parte menos coberta é o cliente HTTP da Evolution, que precisaria de um servidor falso para valer a pena.
+
+**Qualidade do frontend.** `npm run lint` (ESLint 9 com as regras de hooks do React) roda no CI antes do build. Ele achou coisas que o TypeScript não vê: um `ref` sendo escrito durante a renderização no chat e um `setState` dentro de efeito na página do WhatsApp, os dois já corrigidos.
+
+**Dependências.** O Dependabot abre PR semanal para Maven, npm e GitHub Actions, agrupado por assunto para não virar enxurrada de PR.
 
 ---
 

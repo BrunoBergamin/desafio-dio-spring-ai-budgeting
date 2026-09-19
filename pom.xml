@@ -183,6 +183,60 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+              Cobertura de testes. O relatorio sai em target/site/jacoco/index.html no ./mvnw verify.
+              A regra minima cobre so onde mora regra de negocio (service, tool, security, mapper): DTO,
+              entidade e config sao codigo declarativo, e medir isso so inflaria o numero.
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.70</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includes>
+                        <include>dio/budgeting/service/**</include>
+                        <include>dio/budgeting/tool/**</include>
+                        <include>dio/budgeting/security/**</include>
+                        <include>dio/budgeting/mapper/**</include>
+                        <include>dio/budgeting/whatsapp/**</include>
+                    </includes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
