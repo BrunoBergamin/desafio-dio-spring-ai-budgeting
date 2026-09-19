@@ -87,6 +87,30 @@ export interface RecurringRequest {
   active?: boolean;
 }
 
+export type GoalStatus = 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
+
+export interface SavingsGoalResponse {
+  id: string;
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  remaining: number;
+  percentage: number;
+  deadline?: string | null;
+  monthsLeft?: number | null;
+  suggestedMonthly?: number | null;
+  status: GoalStatus;
+  statusLabel: string;
+  message: string;
+}
+
+export interface GoalRequest {
+  name: string;
+  targetAmount: number;
+  deadline?: string;
+  savedAmount?: number;
+}
+
 export interface CategorySummary {
   category: Category;
   categoryLabel: string;

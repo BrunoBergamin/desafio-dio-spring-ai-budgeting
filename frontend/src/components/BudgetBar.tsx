@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { BudgetStatusResponse } from '../api/types';
+import { ProgressBar } from './ProgressBar';
 import { categoryEmoji, money, parseMoney } from '../utils/format';
 
 interface Props {
@@ -11,7 +12,8 @@ interface Props {
 export function BudgetBar({ budget, onRemove, onUpdate }: Props) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(budget.monthlyLimit).replace('.', ','));
-  const width = Math.min(100, Math.max(2, budget.usedPercentage));
+  // No orcamento o tom vem do status: chegar perto do limite e alerta, nao conquista
+  const tone = budget.status === 'EXCEEDED' ? 'danger' : budget.status === 'WARNING' ? 'warning' : 'ok';
 
   const save = async () => {
     if (!onUpdate) return;
@@ -38,9 +40,8 @@ export function BudgetBar({ budget, onRemove, onUpdate }: Props) {
           </span>
         )}
       </div>
-      <div className="bar" role="progressbar" aria-valuenow={budget.usedPercentage} aria-valuemin={0} aria-valuemax={100} aria-label={`${budget.categoryLabel}: ${budget.usedPercentage}% usado`}>
-        <div className="bar-fill" style={{ width: `${width}%` }} />
-      </div>
+      <ProgressBar percentage={budget.usedPercentage} tone={tone}
+                   label={`${budget.categoryLabel}: ${budget.usedPercentage}% usado`} />
       <div className="budget-foot">
         <span className="pill">{budget.statusLabel} · {budget.usedPercentage.toFixed(0)}%</span>
         <span className="row-inline">

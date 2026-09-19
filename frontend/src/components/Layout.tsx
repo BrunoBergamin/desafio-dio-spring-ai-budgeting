@@ -7,6 +7,7 @@ const links = [
   { to: '/conversa', label: 'Lumi', icon: '✨' },
   { to: '/transacoes', label: 'Gastos', icon: '🧾' },
   { to: '/recorrentes', label: 'Recorrentes', icon: '🔁' },
+  { to: '/metas', label: 'Metas', icon: '🏦' },
   { to: '/orcamentos', label: 'Orçamentos', icon: '🎯' },
   { to: '/whatsapp', label: 'WhatsApp', icon: '💬' },
 ];
