@@ -58,7 +58,7 @@ class AssistantFlowGroqIT {
     void should_persistTransaction_when_textCommandIsSent() {
         var response = assistantService.chat(bruno, null, "Gastei 42 reais e 90 centavos na farmácia comprando remédio");
 
-        var saved = transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno);
+        var saved = transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(bruno);
         assertThat(saved).hasSize(1);
         assertThat(saved.getFirst().getAmount()).isEqualByComparingTo("42.90");
         assertThat(saved.getFirst().getCategory()).isEqualTo(Category.PHARMA);
@@ -73,7 +73,7 @@ class AssistantFlowGroqIT {
         var response = assistantService.voiceToText(bruno, null, file);
 
         assertThat(response.transcription()).containsIgnoringCase("reais");
-        assertThat(transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno)).hasSize(1);
+        assertThat(transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(bruno)).hasSize(1);
         System.out.println(response.transcription() + " -> " + response.answer());
     }
 
@@ -83,7 +83,7 @@ class AssistantFlowGroqIT {
 
         var answer = assistantService.chat(outra, null, "Quanto eu gastei este mês? Responda só o número.");
 
-        assertThat(transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(outra)).isEmpty();
+        assertThat(transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(outra)).isEmpty();
         assertThat(answer.answer()).doesNotContain("oitenta").doesNotContain("80");
         System.out.println(answer.answer());
     }

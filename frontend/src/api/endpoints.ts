@@ -1,8 +1,16 @@
 import { api } from './client';
 import type {
-  AssistantResponse, AuthResponse, BudgetStatusResponse, Category,
+  AssistantResponse, AuthResponse, BudgetStatusResponse, Category, PageResponse,
   SpendingSummary, TransactionRequest, TransactionResponse, UserResponse, WhatsAppConnection,
 } from './types';
+
+export interface TransactionFilters {
+  category?: Category;
+  start?: string;
+  end?: string;
+  page?: number;
+  size?: number;
+}
 
 export const authApi = {
   register: (name: string, email: string, password: string) =>
@@ -21,8 +29,9 @@ export const whatsappApi = {
 };
 
 export const transactionsApi = {
-  list: (params?: { category?: Category; start?: string; end?: string }) =>
-    api.get<TransactionResponse[]>('/transactions', { params }).then((r) => r.data),
+  /** Paginado (50 por pagina por padrao, no maximo 500), dos mais recentes para os mais antigos. */
+  list: (params?: TransactionFilters) =>
+    api.get<PageResponse<TransactionResponse>>('/transactions', { params }).then((r) => r.data),
   summary: (params?: { start?: string; end?: string }) =>
     api.get<SpendingSummary>('/transactions/summary', { params }).then((r) => r.data),
   create: (body: TransactionRequest) =>

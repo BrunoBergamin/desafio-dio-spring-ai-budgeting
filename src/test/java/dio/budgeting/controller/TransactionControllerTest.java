@@ -1,5 +1,6 @@
 package dio.budgeting.controller;
 
+import dio.budgeting.dto.response.PageResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
 import dio.budgeting.exception.BusinessException;
@@ -20,6 +21,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -65,6 +67,32 @@ class TransactionControllerTest {
                 .andExpect(header().string("Location", "http://localhost/api/transactions/" + id))
                 .andExpect(jsonPath("$.amount").value(80.50))
                 .andExpect(jsonPath("$.categoryLabel").value("Mercado"));
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    void should_returnAPage_when_listingWithPageAndSize() throws Exception {
+        var item = new TransactionResponse(UUID.randomUUID(), "Padaria", new BigDecimal("18.50"), Category.GROCERIES, "Mercado", LocalDate.of(2026, 9, 15));
+        when(transactionService.list(eq(UUID.fromString(USER_ID)), isNull(), isNull(), isNull(), eq(2), eq(10)))
+                .thenReturn(new PageResponse<>(java.util.List.of(item), 2, 10, 25, 3));
+
+        mockMvc.perform(get("/api/transactions").param("page", "2").param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].description").value("Padaria"))
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.totalElements").value(25))
+                .andExpect(jsonPath("$.totalPages").value(3));
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    void should_useFirstPageOf50_when_pagingParamsAreOmitted() throws Exception {
+        when(transactionService.list(any(), any(), any(), any(), eq(0), eq(50)))
+                .thenReturn(new PageResponse<>(java.util.List.of(), 0, 50, 0, 0));
+
+        mockMvc.perform(get("/api/transactions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty());
     }
 
     @Test

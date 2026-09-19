@@ -48,7 +48,10 @@ public class LumiChat {
                 .user(message)
                 .call()
                 .content());
-        log.info("[lumi] user={} conversa={} pergunta='{}' | resposta='{}'", userId, conversationKey, message, answer);
+        // O conteudo da conversa e dado financeiro pessoal: em INFO fica so o tamanho, o texto vai para DEBUG
+        log.info("[lumi] user={} conversa={} pergunta={} chars | resposta={} chars",
+                userId, conversationKey, message.length(), answer == null ? 0 : answer.length());
+        log.debug("[lumi] pergunta='{}' | resposta='{}'", message, answer);
         return answer;
     }
 

@@ -2,6 +2,8 @@ package dio.budgeting.repository;
 
 import dio.budgeting.entity.Category;
 import dio.budgeting.entity.Transaction;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -11,19 +13,22 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Todas as consultas recebem o usuario: nao existe metodo que devolva dados de todo mundo. */
+/**
+ * Todas as consultas recebem o usuario: nao existe metodo que devolva dados de todo mundo.
+ * As listagens sao paginadas: a ordem vem no {@link Pageable}, e nao no nome do metodo.
+ */
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
     Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
 
-    List<Transaction> findAllByUserIdOrderByDateDescCreatedAtDesc(UUID userId);
+    Page<Transaction> findAllByUserId(UUID userId, Pageable pageable);
 
-    List<Transaction> findAllByUserIdAndCategoryOrderByDateDesc(UUID userId, Category category);
+    Page<Transaction> findAllByUserIdAndCategory(UUID userId, Category category, Pageable pageable);
 
-    List<Transaction> findAllByUserIdAndDateBetweenOrderByDateDesc(UUID userId, LocalDate start, LocalDate end);
+    Page<Transaction> findAllByUserIdAndDateBetween(UUID userId, LocalDate start, LocalDate end, Pageable pageable);
 
-    List<Transaction> findAllByUserIdAndCategoryAndDateBetweenOrderByDateDesc(
-            UUID userId, Category category, LocalDate start, LocalDate end);
+    Page<Transaction> findAllByUserIdAndCategoryAndDateBetween(
+            UUID userId, Category category, LocalDate start, LocalDate end, Pageable pageable);
 
     List<Transaction> findTop5ByUserIdOrderByDateDescCreatedAtDesc(UUID userId);
 

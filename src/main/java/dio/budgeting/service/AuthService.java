@@ -89,7 +89,7 @@ public class AuthService {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("usuário não encontrado"));
         user.linkPhone(phone);
-        log.info("WhatsApp vinculado: user={} phone={}", userId, phone);
+        log.info("WhatsApp vinculado: user={} phone={}", userId, dio.budgeting.security.Masking.phone(phone));
         return userMapper.toResponse(userRepository.save(user));
     }
 

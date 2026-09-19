@@ -2,6 +2,7 @@ package dio.budgeting.service;
 
 import dio.budgeting.dto.request.TransactionRequest;
 import dio.budgeting.dto.response.CategorySummaryResponse;
+import dio.budgeting.dto.response.PageResponse;
 import dio.budgeting.dto.response.SpendingSummaryResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
@@ -15,6 +16,9 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +38,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
+
+    /** Teto do tamanho da pagina: acima disso a resposta fica pesada e o cliente deveria filtrar por periodo. */
+    public static final int MAX_PAGE_SIZE = 500;
+    private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("createdAt"));
 
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
@@ -57,21 +65,27 @@ public class TransactionService {
         return transactionMapper.toResponse(getOrThrow(userId, id));
     }
 
+    /**
+     * Lista paginada, dos mais recentes para os mais antigos. Sem datas, traz todo o historico (paginado);
+     * com uma das datas, aplica as mesmas regras de periodo do resumo.
+     */
     @Transactional(readOnly = true)
-    public List<TransactionResponse> list(UUID userId, Category category, LocalDate start, LocalDate end) {
-        List<Transaction> transactions;
+    public PageResponse<TransactionResponse> list(UUID userId, Category category, LocalDate start, LocalDate end,
+                                                  int page, int size) {
+        var pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, MAX_PAGE_SIZE), NEWEST_FIRST);
+        Page<Transaction> transactions;
         if (start != null || end != null) {
             var period = resolvePeriod(start, end);
             transactions = category == null
-                    ? transactionRepository.findAllByUserIdAndDateBetweenOrderByDateDesc(userId, period.start(), period.end())
-                    : transactionRepository.findAllByUserIdAndCategoryAndDateBetweenOrderByDateDesc(
-                            userId, category, period.start(), period.end());
+                    ? transactionRepository.findAllByUserIdAndDateBetween(userId, period.start(), period.end(), pageable)
+                    : transactionRepository.findAllByUserIdAndCategoryAndDateBetween(
+                            userId, category, period.start(), period.end(), pageable);
         } else {
             transactions = category == null
-                    ? transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(userId)
-                    : transactionRepository.findAllByUserIdAndCategoryOrderByDateDesc(userId, category);
+                    ? transactionRepository.findAllByUserId(userId, pageable)
+                    : transactionRepository.findAllByUserIdAndCategory(userId, category, pageable);
         }
-        return transactions.stream().map(transactionMapper::toResponse).toList();
+        return PageResponse.from(transactions, transactionMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

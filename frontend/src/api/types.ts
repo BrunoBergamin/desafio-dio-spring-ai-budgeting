@@ -35,6 +35,15 @@ export interface TransactionResponse {
   date: string;
 }
 
+/** Pagina de resultados da API (listas grandes vem em partes) */
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 export interface TransactionRequest {
   description: string;
   amount: number;

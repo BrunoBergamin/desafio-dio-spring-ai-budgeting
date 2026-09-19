@@ -1,6 +1,7 @@
 package dio.budgeting.controller;
 
 import dio.budgeting.dto.request.TransactionRequest;
+import dio.budgeting.dto.response.PageResponse;
 import dio.budgeting.dto.response.SpendingSummaryResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Transações", description = "CRUD e consultas de gastos do usuário autenticado")
@@ -45,13 +45,15 @@ public class TransactionController {
         return ResponseEntity.created(location).body(created);
     }
 
-    @Operation(summary = "Lista gastos com filtros opcionais de categoria e período")
+    @Operation(summary = "Lista gastos, paginados, com filtros opcionais de categoria e período (mais recentes primeiro)")
     @GetMapping
-    public List<TransactionResponse> list(
+    public PageResponse<TransactionResponse> list(
             @RequestParam(required = false) Category category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        return transactionService.list(currentUser.requireUserId(), category, start, end);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return transactionService.list(currentUser.requireUserId(), category, start, end, page, size);
     }
 
     @Operation(summary = "Resumo de gastos por categoria no período (padrão: mês atual)")

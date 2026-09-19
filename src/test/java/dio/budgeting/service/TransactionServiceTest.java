@@ -19,6 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -32,7 +35,11 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Sort;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -137,6 +144,35 @@ class TransactionServiceTest {
 
         assertThatThrownBy(() -> service.delete(anotherUser, id)).isInstanceOf(ResourceNotFoundException.class);
         verify(transactionRepository, never()).delete(any());
+    }
+
+    @Test
+    void should_clampPageSizeAndSortNewestFirst_when_listing() {
+        var transaction = new Transaction(owner, "Mercado", BigDecimal.TEN, Category.GROCERIES, TODAY);
+        when(transactionRepository.findAllByUserId(eq(USER_ID), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(transaction), inv.getArgument(1, Pageable.class), 1));
+
+        var page = service.list(USER_ID, null, null, null, -3, 9_999);
+
+        var captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(transactionRepository).findAllByUserId(eq(USER_ID), captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isZero();
+        assertThat(captor.getValue().getPageSize()).isEqualTo(TransactionService.MAX_PAGE_SIZE);
+        assertThat(captor.getValue().getSort().getOrderFor("date").getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(page.content()).extracting(r -> r.description()).containsExactly("Mercado");
+        assertThat(page.totalElements()).isEqualTo(1);
+        assertThat(page.totalPages()).isEqualTo(1);
+    }
+
+    @Test
+    void should_useThePeriodQuery_when_listingWithDates() {
+        when(transactionRepository.findAllByUserIdAndDateBetween(eq(USER_ID), eq(LocalDate.of(2026, 9, 1)), eq(TODAY), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
+
+        var page = service.list(USER_ID, null, LocalDate.of(2026, 9, 1), null, 0, 50);
+
+        assertThat(page.content()).isEmpty();
+        assertThat(page.size()).isEqualTo(50);
     }
 
     @Test

@@ -44,7 +44,7 @@ class AssistantFlowIT {
     void should_persistTransaction_when_textCommandIsSent() {
         var response = assistantService.chat(bruno, null, "Gastei 42 reais e 90 centavos na farmácia comprando remédio");
 
-        var saved = transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno);
+        var saved = transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(bruno);
         assertThat(saved).hasSize(1);
         assertThat(saved.getFirst().getAmount()).isEqualByComparingTo("42.90");
         assertThat(saved.getFirst().getCategory()).isEqualTo(Category.PHARMA);
@@ -55,7 +55,7 @@ class AssistantFlowIT {
     void should_notPersist_when_amountIsMissing() {
         var response = assistantService.chat(bruno, null, "Fui ao mercado hoje");
 
-        assertThat(transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno)).isEmpty();
+        assertThat(transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(bruno)).isEmpty();
         System.out.println(response.answer());
     }
 
@@ -66,7 +66,7 @@ class AssistantFlowIT {
 
         var mp3 = assistantService.voiceToVoice(bruno, null, file);
 
-        assertThat(transactionRepository.findAllByUserIdOrderByDateDescCreatedAtDesc(bruno)).hasSize(1);
+        assertThat(transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(bruno)).hasSize(1);
         assertThat(mp3).hasSizeGreaterThan(1024);
     }
 }

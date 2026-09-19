@@ -233,6 +233,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .list-main > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-amount { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; padding-top: 0.75rem; }
 .table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
 .table th, .table td { padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
 .table th { color: var(--text-2); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }

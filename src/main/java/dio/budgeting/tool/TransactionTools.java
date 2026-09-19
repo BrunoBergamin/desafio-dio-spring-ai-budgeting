@@ -63,9 +63,8 @@ public class TransactionTools {
             ToolContext toolContext) {
         var userId = ToolUser.require(toolContext);
         log.info("[tool] listar_transacoes user={} category={} start={} end={}", userId, category, start, end);
-        return transactionService.list(userId, category, parseDate(start), parseDate(end)).stream()
-                .limit(MAX_LISTED)
-                .toList();
+        // Primeira pagina, ja limitada no banco: o modelo nunca recebe mais do que MAX_LISTED itens
+        return transactionService.list(userId, category, parseDate(start), parseDate(end), 0, MAX_LISTED).content();
     }
 
     @Tool(name = "ultimas_transacoes", description = "Retorna as 5 transações mais recentes")

@@ -119,7 +119,7 @@ public class AssistantService {
             }
             throw e;
         }
-        log.info("[assistant] transcrição: '{}'", transcription);
+        log.debug("[assistant] transcrição: '{}'", transcription);
 
         if (transcription == null || transcription.isBlank()) {
             throw new BusinessException("não foi possível entender o áudio, tente gravar novamente");
