@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { budgetsApi, goalsApi, recurringApi, transactionsApi, type TransactionFilters } from '../api/endpoints';
+import { budgetsApi, goalsApi, recurringApi, reportsApi, transactionsApi, type TransactionFilters } from '../api/endpoints';
 import type { ExpenseCategory, GoalRequest, RecurringRequest, TransactionRequest } from '../api/types';
 import { invalidateFinancial, keys } from '../lib/queryClient';
 
@@ -57,6 +57,10 @@ export function useUpdateRecurring() {
 
 export function useDeleteRecurring() {
   return useMutation({ mutationFn: (id: string) => recurringApi.remove(id), onSuccess: invalidateFinancial });
+}
+
+export function useMonthlyReport(month?: string) {
+  return useQuery({ queryKey: keys.report(month), queryFn: () => reportsApi.monthly(month) });
 }
 
 export function useGoals() {

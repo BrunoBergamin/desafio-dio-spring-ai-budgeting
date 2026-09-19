@@ -78,6 +78,14 @@ Authorization: Bearer {{token}}
 GET {{base}}/transactions/summary
 Authorization: Bearer {{token}}
 
+### Baixar os lancamentos do mes em CSV (abre no Excel)
+GET {{base}}/transactions/export.csv?start=2026-09-01&end=2026-09-30
+Authorization: Bearer {{token}}
+
+### Relatorio do mes (entrou, saiu, sobrou, maiores gastos, orcamentos e metas)
+GET {{base}}/reports/monthly
+Authorization: Bearer {{token}}
+
 ### Criar uma meta de economia
 POST {{base}}/goals
 Content-Type: application/json

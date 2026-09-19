@@ -7,6 +7,7 @@ import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
 import dio.budgeting.entity.TransactionType;
 import dio.budgeting.security.CurrentUserProvider;
+import dio.budgeting.service.CsvExporter;
 import dio.budgeting.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +17,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -68,6 +72,23 @@ public class TransactionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
         return transactionService.summary(currentUser.requireUserId(), start, end);
+    }
+
+    @Operation(summary = "Baixa os lançamentos do período em CSV (separado por ponto e vírgula, abre no Excel)")
+    @GetMapping(value = "/export.csv", produces = "text/csv")
+    public ResponseEntity<byte[]> exportCsv(
+            @RequestParam(required = false) TransactionType type,
+            @RequestParam(required = false) Category category,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        var page = transactionService.list(currentUser.requireUserId(), type, category, start, end,
+                0, TransactionService.MAX_PAGE_SIZE);
+        var filename = "lancamentos-%s.csv".formatted(start != null ? start.toString().substring(0, 7) : "periodo");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(filename).build().toString())
+                .body(CsvExporter.toCsv(page.content()));
     }
 
     @Operation(summary = "Busca um gasto pelo id")

@@ -132,6 +132,24 @@ export interface SpendingSummary {
   categories: CategorySummary[];
 }
 
+export interface MonthlyReport {
+  month: string;
+  start: string;
+  end: string;
+  income: number;
+  expenses: number;
+  balance: number;
+  quantity: number;
+  previousExpenses: number;
+  /** Variacao dos gastos contra o mes anterior; nulo quando nao havia gasto para comparar */
+  expensesDeltaPercentage?: number | null;
+  topCategories: CategorySummary[];
+  topExpenses: TransactionResponse[];
+  budgets: BudgetStatusResponse[];
+  budgetsInAlert: number;
+  goals: SavingsGoalResponse[];
+}
+
 export interface BudgetStatusResponse {
   id: string;
   category: Category;
