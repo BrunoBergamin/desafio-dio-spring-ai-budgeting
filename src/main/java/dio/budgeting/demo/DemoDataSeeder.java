@@ -2,9 +2,11 @@ package dio.budgeting.demo;
 
 import dio.budgeting.entity.Budget;
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.RecurringTransaction;
 import dio.budgeting.entity.Transaction;
 import dio.budgeting.entity.User;
 import dio.budgeting.repository.BudgetRepository;
+import dio.budgeting.repository.RecurringTransactionRepository;
 import dio.budgeting.repository.TransactionRepository;
 import dio.budgeting.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
+    private final RecurringTransactionRepository recurringRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
@@ -46,7 +49,6 @@ public class DemoDataSeeder implements ApplicationRunner {
             new Sample("Padaria", "18.50", Category.GROCERIES, 2),
             new Sample("Almoço no restaurante", "48.90", Category.RESTAURANT, 2),
             new Sample("Uber para o trabalho", "22.90", Category.TRANSPORT, 3),
-            new Sample("Netflix", "59.90", Category.SUBSCRIPTIONS, 4),
             new Sample("Farmácia: remédio para dor de cabeça", "27.30", Category.PHARMA, 5),
             new Sample("Gasolina", "180.00", Category.AUTO, 6),
             new Sample("Pizza de sexta", "72.00", Category.RESTAURANT, 7),
@@ -68,15 +70,12 @@ public class DemoDataSeeder implements ApplicationRunner {
             new Sample("Internet", "119.90", Category.HOUSING, 36),
             new Sample("Gasolina", "165.00", Category.AUTO, 38),
             new Sample("Jantar de comemoração", "142.00", Category.RESTAURANT, 40),
-            new Sample("Netflix", "59.90", Category.SUBSCRIPTIONS, 41),
             new Sample("Veterinário", "210.00", Category.PETS, 44),
             new Sample("Mercado", "254.30", Category.GROCERIES, 47),
             new Sample("Academia", "99.90", Category.SUBSCRIPTIONS, 50),
             new Sample("IPVA (parcela)", "230.00", Category.TAXES, 52),
             // receitas, para o painel ter saldo e nao so gasto
-            new Sample("Salário", "5200.00", Category.SALARY, 14),
             new Sample("Projeto freelance", "800.00", Category.FREELANCE, 22),
-            new Sample("Salário", "5200.00", Category.SALARY, 45),
             new Sample("Rendimento da poupança", "63.40", Category.INVESTMENTS, 46));
 
     /**
@@ -101,6 +100,19 @@ public class DemoDataSeeder implements ApplicationRunner {
                         new BigDecimal(sample.amount()), sample.category(), today.minusDays(sample.daysAgo())));
             }
             log.info("[demo] {} lançamentos de exemplo criados", SAMPLES.size());
+        }
+
+        // Contas fixas: alem de aparecerem na pagina "Recorrentes", elas geram os lancamentos
+        // de Netflix e salario sozinhas na subida, mostrando o recurso funcionando de verdade.
+        if (recurringRepository.countByUserId(user.getId()) == 0) {
+            var twoMonthsAgo = today.minusMonths(2).withDayOfMonth(1);
+            recurringRepository.save(new RecurringTransaction(user, "Aluguel", new BigDecimal("1500.00"),
+                    Category.HOUSING, 10, twoMonthsAgo, null));
+            recurringRepository.save(new RecurringTransaction(user, "Netflix", new BigDecimal("59.90"),
+                    Category.SUBSCRIPTIONS, 4, twoMonthsAgo, null));
+            recurringRepository.save(new RecurringTransaction(user, "Salário", new BigDecimal("5200.00"),
+                    Category.SALARY, 5, twoMonthsAgo, null));
+            log.info("[demo] 3 contas recorrentes de exemplo criadas");
         }
 
         var month = today.withDayOfMonth(1);

@@ -78,6 +78,22 @@ Authorization: Bearer {{token}}
 GET {{base}}/transactions/summary
 Authorization: Bearer {{token}}
 
+### Cadastrar uma conta que se repete todo mes
+POST {{base}}/recurring
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "description": "Aluguel",
+  "amount": 1500.00,
+  "category": "HOUSING",
+  "dayOfMonth": 10
+}
+
+### Listar as contas fixas, com a proxima data de cada uma
+GET {{base}}/recurring
+Authorization: Bearer {{token}}
+
 ### Definir limite mensal
 POST {{base}}/budgets
 Authorization: Bearer {{token}}

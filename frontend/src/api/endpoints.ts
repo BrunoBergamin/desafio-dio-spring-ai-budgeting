@@ -1,7 +1,8 @@
 import { api } from './client';
 import type {
   AssistantResponse, AuthResponse, BudgetStatusResponse, Category, ExpenseCategory, PageResponse,
-  SpendingSummary, TransactionRequest, TransactionResponse, TransactionType, UserResponse, WhatsAppConnection,
+  RecurringRequest, RecurringResponse, SpendingSummary, TransactionRequest, TransactionResponse,
+  TransactionType, UserResponse, WhatsAppConnection,
 } from './types';
 
 export interface TransactionFilters {
@@ -40,6 +41,14 @@ export const transactionsApi = {
   update: (id: string, body: TransactionRequest) =>
     api.put<TransactionResponse>(`/transactions/${id}`, body).then((r) => r.data),
   remove: (id: string) => api.delete(`/transactions/${id}`),
+};
+
+export const recurringApi = {
+  list: () => api.get<RecurringResponse[]>('/recurring').then((r) => r.data),
+  create: (body: RecurringRequest) => api.post<RecurringResponse>('/recurring', body).then((r) => r.data),
+  update: (id: string, body: RecurringRequest) =>
+    api.put<RecurringResponse>(`/recurring/${id}`, body).then((r) => r.data),
+  remove: (id: string) => api.delete(`/recurring/${id}`),
 };
 
 export const budgetsApi = {

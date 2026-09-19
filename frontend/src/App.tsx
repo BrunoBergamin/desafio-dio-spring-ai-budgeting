@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ChatPage } from './pages/ChatPage';
+import { RecurringPage } from './pages/RecurringPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { BudgetsPage } from './pages/BudgetsPage';
 import { WhatsAppPage } from './pages/WhatsAppPage';
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/painel" element={<DashboardPage />} />
           <Route path="/conversa" element={<ChatPage />} />
           <Route path="/transacoes" element={<TransactionsPage />} />
+          <Route path="/recorrentes" element={<RecurringPage />} />
           <Route path="/orcamentos" element={<BudgetsPage />} />
           <Route path="/whatsapp" element={<WhatsAppPage />} />
         </Route>

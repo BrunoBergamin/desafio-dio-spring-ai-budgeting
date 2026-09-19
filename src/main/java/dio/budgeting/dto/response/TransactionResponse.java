@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 public record TransactionResponse(
         UUID id,
         String description,
@@ -14,6 +16,10 @@ public record TransactionResponse(
         Category category,
         String categoryLabel,
         TransactionType type,
+
+        @Schema(description = "Id da conta recorrente que gerou este lançamento; nulo quando foi lançado à mão")
+        UUID recurringId,
+
         LocalDate date
 ) {
 }

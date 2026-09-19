@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 public final class SpaRoutes {
 
     /** Nomes das paginas, separados por "|" para servir de regex no {@code @GetMapping}. */
-    public static final String PAGES = "login|cadastro|painel|conversa|transacoes|orcamentos|whatsapp";
+    public static final String PAGES = "login|cadastro|painel|conversa|transacoes|recorrentes|orcamentos|whatsapp";
 
     /** Padrao de rota do Spring MVC: "/{page:login|cadastro|...}". Constante de compilacao, cabe em anotacao. */
     public static final String PATTERN = "/{page:" + PAGES + "}";

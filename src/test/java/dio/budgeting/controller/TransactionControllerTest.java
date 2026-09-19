@@ -57,7 +57,7 @@ class TransactionControllerTest {
     void should_return201_when_transactionIsCreated() throws Exception {
         var id = UUID.randomUUID();
         when(transactionService.create(eq(UUID.fromString(USER_ID)), any())).thenReturn(new TransactionResponse(
-                id, "Mercado", new BigDecimal("80.50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, LocalDate.of(2026, 9, 15)));
+                id, "Mercado", new BigDecimal("80.50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, null, LocalDate.of(2026, 9, 15)));
 
         mockMvc.perform(post("/api/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,7 +73,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = USER_ID)
     void should_returnAPage_when_listingWithPageAndSize() throws Exception {
-        var item = new TransactionResponse(UUID.randomUUID(), "Padaria", new BigDecimal("18.50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, LocalDate.of(2026, 9, 15));
+        var item = new TransactionResponse(UUID.randomUUID(), "Padaria", new BigDecimal("18.50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, null, LocalDate.of(2026, 9, 15));
         when(transactionService.list(eq(UUID.fromString(USER_ID)), isNull(), isNull(), isNull(), isNull(), eq(2), eq(10)))
                 .thenReturn(new PageResponse<>(java.util.List.of(item), 2, 10, 25, 3));
 

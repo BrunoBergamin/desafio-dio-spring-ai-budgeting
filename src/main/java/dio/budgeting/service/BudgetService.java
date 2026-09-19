@@ -22,8 +22,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -166,18 +164,11 @@ public class BudgetService {
 
     /** "AAAA-MM" -> dia 1 do mes; vazio -> mes atual (no fuso do Clock). */
     LocalDate resolveMonth(String month) {
-        if (month == null || month.isBlank()) {
-            return LocalDate.now(clock).withDayOfMonth(1);
-        }
-        try {
-            return YearMonth.parse(month.trim()).atDay(1);
-        } catch (DateTimeParseException e) {
-            throw new BusinessException("mês '%s' inválido, use o formato AAAA-MM".formatted(month));
-        }
+        return MonthParser.parse(month, clock);
     }
 
     static String formatMonth(LocalDate month) {
-        return YearMonth.from(month).toString();
+        return MonthParser.format(month);
     }
 
     private void validate(BudgetRequest request) {

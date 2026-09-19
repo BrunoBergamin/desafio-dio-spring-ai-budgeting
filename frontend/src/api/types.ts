@@ -40,6 +40,8 @@ export interface TransactionResponse {
   category: Category;
   categoryLabel: string;
   type: TransactionType;
+  /** Id da conta recorrente que gerou este lancamento; nulo quando foi lancado a mao */
+  recurringId?: string | null;
   date: string;
 }
 
@@ -57,6 +59,32 @@ export interface TransactionRequest {
   amount: number;
   category: Category;
   date?: string;
+}
+
+export interface RecurringResponse {
+  id: string;
+  description: string;
+  amount: number;
+  category: Category;
+  categoryLabel: string;
+  type: TransactionType;
+  dayOfMonth: number;
+  active: boolean;
+  startMonth: string;
+  endMonth?: string | null;
+  /** Proxima data em que vira lancamento; nulo quando pausada ou ja acabou */
+  nextOccurrence?: string | null;
+  message: string;
+}
+
+export interface RecurringRequest {
+  description: string;
+  amount: number;
+  category: Category;
+  dayOfMonth: number;
+  startMonth?: string;
+  endMonth?: string | null;
+  active?: boolean;
 }
 
 export interface CategorySummary {
