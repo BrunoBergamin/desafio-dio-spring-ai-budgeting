@@ -3,10 +3,12 @@ package dio.budgeting.demo;
 import dio.budgeting.entity.Budget;
 import dio.budgeting.entity.Category;
 import dio.budgeting.entity.RecurringTransaction;
+import dio.budgeting.entity.SavingsGoal;
 import dio.budgeting.entity.Transaction;
 import dio.budgeting.entity.User;
 import dio.budgeting.repository.BudgetRepository;
 import dio.budgeting.repository.RecurringTransactionRepository;
+import dio.budgeting.repository.SavingsGoalRepository;
 import dio.budgeting.repository.TransactionRepository;
 import dio.budgeting.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
     private final RecurringTransactionRepository recurringRepository;
+    private final SavingsGoalRepository goalRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
@@ -113,6 +116,16 @@ public class DemoDataSeeder implements ApplicationRunner {
             recurringRepository.save(new RecurringTransaction(user, "Salário", new BigDecimal("5200.00"),
                     Category.SALARY, 5, twoMonthsAgo, null));
             log.info("[demo] 3 contas recorrentes de exemplo criadas");
+        }
+
+        if (goalRepository.countByUserId(user.getId()) == 0) {
+            var viagem = new SavingsGoal(user, "Viagem", new BigDecimal("6000.00"), today.plusMonths(4));
+            viagem.changeSaved(new BigDecimal("1800.00"));
+            goalRepository.save(viagem);
+            var reserva = new SavingsGoal(user, "Reserva de emergência", new BigDecimal("10000.00"), null);
+            reserva.changeSaved(new BigDecimal("4200.00"));
+            goalRepository.save(reserva);
+            log.info("[demo] 2 metas de economia de exemplo criadas");
         }
 
         var month = today.withDayOfMonth(1);

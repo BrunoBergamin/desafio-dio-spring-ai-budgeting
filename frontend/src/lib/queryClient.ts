@@ -18,6 +18,7 @@ export const keys = {
   budgets: (month?: string) => ['budgets', month ?? ''] as const,
   alerts: (month?: string) => ['alerts', month ?? ''] as const,
   recurring: ['recurring'] as const,
+  goals: ['goals'] as const,
   whatsapp: ['whatsapp'] as const,
 };
 
@@ -30,5 +31,6 @@ export function invalidateFinancial() {
     queryClient.invalidateQueries({ queryKey: ['alerts'] }),
     // Criar uma conta fixa pode ja gerar o lancamento do mes, entao a lista tambem muda
     queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+    queryClient.invalidateQueries({ queryKey: ['goals'] }),
   ]);
 }

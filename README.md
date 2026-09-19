@@ -21,7 +21,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-169%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%204%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-204%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%204%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![Cobertura](https://img.shields.io/badge/cobertura-76%25%20(JaCoCo)-success?style=flat-square)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
@@ -259,10 +259,13 @@ Eu podia ter criado um campo `tipo` no formulário e na ferramenta, e validar qu
 **8. Conta que se repete é uma regra, não um lembrete.**
 A parte difícil de "todo dia 10 pago o aluguel" não é cadastrar, é não duplicar nem perder mês. Cada regra guarda o último mês já gerado, e o gerador percorre do mês seguinte a esse até hoje. Isso resolve os três casos com um laço só: a primeira vez, o dia que ainda não chegou (para e não grava nada) e o computador desligado por semanas (gera cada mês que passou, na data certa de cada um). Rodar duas vezes no mesmo dia não cria nada de novo, então ele roda todo dia às 00:05 e também quando a aplicação sobe. Dia 31 em fevereiro cai no último dia do mês, e pausar não faz a conta voltar cobrando os meses parados.
 
-**9. A hora "de hoje" vem de um `Clock`, não do servidor.**
+**9. Guardar dinheiro numa meta não é um gasto.**
+A tentação era criar um lançamento na categoria "poupança" quando a pessoa guarda dinheiro. Isso estragaria tudo o que já existe: o total do mês subiria sem nada ter sido consumido, o orçamento seria comido por dinheiro que continua com você, e o saldo ficaria errado. O valor guardado mora na própria meta. Resumo, orçamento e saldo continuam falando só de dinheiro que entrou e saiu de verdade.
+
+**10. A hora "de hoje" vem de um `Clock`, não do servidor.**
 O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília cairia no dia seguinte, e no dia 30 o "resumo do mês" viraria o mês que vem. Existe um único bean `Clock` no fuso `America/Sao_Paulo` (`app.timezone`) e todo `LocalDate.now()` passa por ele. De quebra os testes de data ficaram determinísticos: o `TransactionServiceTest` fixa o relógio em 01:30 UTC e prova que o gasto cai no dia anterior, o de Brasília.
 
-**10. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
+**11. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
 
 **Outras:** `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o mesmo SQL servir H2 e MySQL; JWT com o suporte nativo do Spring Security (`NimbusJwtEncoder`, HS256) em vez de biblioteca extra; 401 e 403 escritos como `ProblemDetail` por um `AuthenticationEntryPoint` próprio, porque exceções de segurança acontecem antes do `@RestControllerAdvice`; frontend empacotado dentro do jar para ter uma porta só, sem CORS e um container só; token no `localStorage`, sabendo do risco de XSS (cookie `HttpOnly` seria o próximo passo); sem Kafka, porque para um app de gastos pessoais seria complexidade sem necessidade.
 
@@ -291,7 +294,7 @@ O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília c
 | 17 | **Áudio em formato inesperado vira 422 explicado** (o Gravador do Windows salva AAC cru como `.m4a`). Descobri testando com a minha voz. | `AssistantService` |
 | 18 | **Erros padronizados** com `ProblemDetail` em toda a API, inclusive 401/403 da camada de segurança. | `GlobalExceptionHandler`, `ProblemDetailResponses` |
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
-| 20 | **179 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA) e cobertura com JaCoCo. | `src/test` |
+| 20 | **214 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA) e cobertura com JaCoCo. | `src/test` |
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, chat "Você", áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
 | 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. | `Category` |
 | 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
@@ -400,6 +403,9 @@ Resposta real do passo 3 (o texto varia conforme o modelo):
 | PUT/DELETE | `/api/budgets/{id}` | Altera limite · remove |
 | POST/GET | `/api/recurring` | Cadastra · lista contas que se repetem todo mês, com a próxima data |
 | PUT/DELETE | `/api/recurring/{id}` | Altera, pausa ou retoma (`active`) · remove (os lançamentos ficam) |
+| POST/GET | `/api/goals` | Cria · lista metas de economia com o progresso |
+| POST | `/api/goals/{id}/deposits` | Guarda dinheiro na meta (não é gasto) |
+| PUT/DELETE | `/api/goals/{id}` | Altera nome, alvo, prazo ou valor guardado · remove |
 | POST | `/api/assistant/chat` | Comando em texto (`conversationId` opcional) |
 | POST | `/api/assistant/voice/text` | Áudio → transcrição + resposta JSON |
 | POST | `/api/assistant/voice` | Áudio → resposta MP3 (503 no perfil groq) |
@@ -408,14 +414,14 @@ Resposta real do passo 3 (o texto varia conforme o modelo):
 | GET/POST | `/api/whatsapp/status` · `/api/whatsapp/connect` | Estado da conexão · QR code para parear (perfil `whatsapp`) |
 | POST | `/api/whatsapp/webhook/{segredo}` | Chamado pela Evolution a cada mensagem (público, protegido pelo segredo) |
 
-Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`, `SUBSCRIPTIONS`, `CLOTHING`, `PERSONAL_CARE`, `LEISURE`, `EDUCATION`, `PETS`, `TRAVEL`, `GIFTS`, `TAXES`, `OTHER`. De receita: `SALARY`, `FREELANCE`, `INVESTMENTS`, `OTHER_INCOME`. Ferramentas que a Lumi conhece: `registrar_transacao`, `listar_transacoes`, `ultimas_transacoes`, `resumo_de_gastos`, `definir_orcamento`, `consultar_orcamentos`, `status_do_orcamento`, `alertas_de_orcamento`, `criar_recorrente`, `listar_recorrentes`.
+Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`, `SUBSCRIPTIONS`, `CLOTHING`, `PERSONAL_CARE`, `LEISURE`, `EDUCATION`, `PETS`, `TRAVEL`, `GIFTS`, `TAXES`, `OTHER`. De receita: `SALARY`, `FREELANCE`, `INVESTMENTS`, `OTHER_INCOME`. Ferramentas que a Lumi conhece: `registrar_transacao`, `listar_transacoes`, `ultimas_transacoes`, `resumo_de_gastos`, `definir_orcamento`, `consultar_orcamentos`, `status_do_orcamento`, `alertas_de_orcamento`, `criar_recorrente`, `listar_recorrentes`, `criar_meta`, `guardar_na_meta`, `consultar_metas`.
 
 ---
 
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 169 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
+./mvnw test      # 204 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
 ./mvnw verify    # + 4 num MySQL real (Testcontainers, precisa do Docker) + 9 de ponta a ponta com a IA
                  #   (os de IA só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir no ambiente)
 ```
@@ -426,6 +432,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 | `AuthServiceTest`, `JwtServiceTest` | Unitário | cadastro, e-mail duplicado, credencial inválida → 401, login demo (e recusa com o modo desligado), token com `sub` = id, assinatura com outra chave falha |
 | `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest`, `BoundedChatMemoryRepositoryTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, resposta duplicada pelo modelo limpa, formatos de áudio, TTS desligado, conversa mais antiga descartada ao passar do limite |
 | `TransactionToolsTest`, `BudgetToolsTest`, `RecurringToolsTest` | Unitário | ferramentas expostas, **`userId` fora do schema**, `userId` falso do modelo ignorado, erro claro sem contexto |
+| `SavingsGoalServiceTest` | Unitário com relógio fixo | percentual nas fronteiras, depósito que conclui a meta, guardar mais que o alvo não deixa "faltando" negativo, baixar o valor desfaz a conclusão, meta vencida, quanto por mês até o prazo, nome repetido vira 422 |
 | `RecurringTransactionServiceTest` | Unitário com relógio fixo | **dia 31 em fevereiro**, acerto de meses após dias sem ligar o app, rodar duas vezes não duplica, dia que ainda não chegou, mês final respeitado, pausar e retomar sem cobrar o período parado, uma regra com erro não derruba as outras |
 | `AuthControllerTest`, `TransactionControllerTest`, `BudgetControllerTest`, `AssistantControllerTest` | `@WebMvcTest` + `SecurityConfig` real | 401 com `ProblemDetail`, 201/400/404/422/503, validação por campo |
 | `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | chat "Você" aceito e eco da própria resposta ignorado, mensagens para outras pessoas e grupos ignoradas, extrai número (inclusive com LID), vínculo automático da conta demo, áudio em base64 vai para o Whisper, segredo errado → 404 |
@@ -434,7 +441,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 | `MySqlMigrationsIT` (4) | Testcontainers, MySQL 9.6 real | as 5 migrations rodam no MySQL (não só no H2), agregação por categoria, **busca com filtros nulos** (`:type is null or ...`, que o H2 aceita e o MySQL poderia recusar), `UNIQUE` de e-mail e de orçamento; pulado sem Docker |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **169 no backend + 11 no frontend** sem chave; **179** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
+Resultado local: **204 no backend + 13 no frontend** sem chave; **214** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
 
 **Cobertura (JaCoCo).** O `./mvnw verify` gera `target/site/jacoco/index.html` e falha se a cobertura de linhas cair abaixo de 70%. A medição é só onde mora regra de negócio (`service`, `tool`, `security`, `mapper`, `whatsapp`): DTO, entidade e configuração são declarativos e só inflariam o número. Hoje está em **76%**, e a parte menos coberta é o cliente HTTP da Evolution, que precisaria de um servidor falso para valer a pena.
 
@@ -500,7 +507,6 @@ O que é meu de verdade: as escolhas, os testes com a minha voz e o meu WhatsApp
 - **API oficial do WhatsApp (Meta Cloud API):** outra implementação de `WhatsAppGateway`, sem mexer no resto.
 - **Memória de conversa em banco** (`JdbcChatMemoryRepository`) para sobreviver ao restart e a várias instâncias.
 - **Token em cookie `HttpOnly`** no lugar do `localStorage`.
-- **Metas de economia**, para guardar dinheiro com prazo e a Lumi acompanhar o progresso.
 
 ---
 

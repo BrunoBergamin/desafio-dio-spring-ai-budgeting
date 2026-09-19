@@ -1,7 +1,8 @@
 import { api } from './client';
 import type {
   AssistantResponse, AuthResponse, BudgetStatusResponse, Category, ExpenseCategory, PageResponse,
-  RecurringRequest, RecurringResponse, SpendingSummary, TransactionRequest, TransactionResponse,
+  GoalRequest, RecurringRequest, RecurringResponse, SavingsGoalResponse, SpendingSummary,
+  TransactionRequest, TransactionResponse,
   TransactionType, UserResponse, WhatsAppConnection,
 } from './types';
 
@@ -61,6 +62,15 @@ export const budgetsApi = {
   update: (id: string, monthlyLimit: number) =>
     api.put<BudgetStatusResponse>(`/budgets/${id}`, { monthlyLimit }).then((r) => r.data),
   remove: (id: string) => api.delete(`/budgets/${id}`),
+};
+
+export const goalsApi = {
+  list: () => api.get<SavingsGoalResponse[]>('/goals').then((r) => r.data),
+  create: (body: GoalRequest) => api.post<SavingsGoalResponse>('/goals', body).then((r) => r.data),
+  update: (id: string, body: GoalRequest) => api.put<SavingsGoalResponse>(`/goals/${id}`, body).then((r) => r.data),
+  deposit: (id: string, amount: number) =>
+    api.post<SavingsGoalResponse>(`/goals/${id}/deposits`, { amount }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/goals/${id}`),
 };
 
 export const assistantApi = {

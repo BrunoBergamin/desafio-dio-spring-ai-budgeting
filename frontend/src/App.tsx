@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ChatPage } from './pages/ChatPage';
+import { GoalsPage } from './pages/GoalsPage';
 import { RecurringPage } from './pages/RecurringPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { BudgetsPage } from './pages/BudgetsPage';
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/conversa" element={<ChatPage />} />
           <Route path="/transacoes" element={<TransactionsPage />} />
           <Route path="/recorrentes" element={<RecurringPage />} />
+          <Route path="/metas" element={<GoalsPage />} />
           <Route path="/orcamentos" element={<BudgetsPage />} />
           <Route path="/whatsapp" element={<WhatsAppPage />} />
         </Route>
