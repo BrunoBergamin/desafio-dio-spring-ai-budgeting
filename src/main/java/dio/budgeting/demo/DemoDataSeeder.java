@@ -93,7 +93,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         budgetRepository.save(new Budget(user, Category.RESTAURANT, month, new BigDecimal("300.00")));
         budgetRepository.save(new Budget(user, Category.SUBSCRIPTIONS, month, new BigDecimal("100.00")));
         budgetRepository.save(new Budget(user, Category.TRANSPORT, month, new BigDecimal("150.00")));
-        log.info("[demo] conta demo criada: {} (senha: {}) com {} gastos e 4 orçamentos",
-                properties.email(), properties.password(), SAMPLES.size());
+        log.info("[demo] conta demo criada: {} com {} gastos e 4 orçamentos (senha no .env.example)",
+                properties.email(), SAMPLES.size());
     }
 }

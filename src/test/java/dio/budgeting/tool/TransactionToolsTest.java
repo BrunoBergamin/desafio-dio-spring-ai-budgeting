@@ -1,6 +1,7 @@
 package dio.budgeting.tool;
 
 import dio.budgeting.dto.request.TransactionRequest;
+import dio.budgeting.dto.response.PageResponse;
 import dio.budgeting.entity.Category;
 import dio.budgeting.exception.BusinessException;
 import dio.budgeting.service.ExpenseService;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionToolsTest {
@@ -92,6 +94,17 @@ class TransactionToolsTest {
         tools.spendingSummary("", null, context(ME));
 
         verify(transactionService).summary(ME, null, null);
+    }
+
+    @Test
+    void should_askOnlyTheFirstPageLimitedInTheDatabase_when_listing() {
+        when(transactionService.list(ME, Category.GROCERIES, null, null, 0, TransactionTools.MAX_LISTED))
+                .thenReturn(new PageResponse<>(java.util.List.of(), 0, TransactionTools.MAX_LISTED, 0, 0));
+
+        var result = tools.listTransactions(Category.GROCERIES, null, "", context(ME));
+
+        assertThat(result).isEmpty();
+        verify(transactionService).list(ME, Category.GROCERIES, null, null, 0, TransactionTools.MAX_LISTED);
     }
 
     @Test

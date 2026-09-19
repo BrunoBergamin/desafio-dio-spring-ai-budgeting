@@ -7,6 +7,7 @@ import { useToast } from '../ui/Toast';
 import { CATEGORIES, categoryEmoji, currentMonth, money, monthLabel, monthRange, parseMoney, shiftMonth, shortDate, today } from '../utils/format';
 
 type Sort = 'date' | 'amount';
+const PAGE_SIZE = 50;
 
 export function TransactionsPage() {
   const { notify } = useToast();
@@ -18,8 +19,13 @@ export function TransactionsPage() {
   const [editing, setEditing] = useState<TransactionResponse | null>(null);
   const [removing, setRemoving] = useState<TransactionResponse | null>(null);
 
+  const [page, setPage] = useState(0);
+  // Trocar de mês, de filtro ou marcar "tudo" muda a lista inteira: a leitura recomeça da primeira página
+  const goToMonth = (value: string) => { setMonth(value); setPage(0); };
+  const changeFilter = (value: Category | '') => { setFilter(value); setPage(0); };
+  const toggleAllTime = (value: boolean) => { setAllTime(value); setPage(0); };
   const range = allTime ? {} : monthRange(month);
-  const query = useTransactions({ category: filter || undefined, ...range });
+  const query = useTransactions({ category: filter || undefined, ...range, page, size: PAGE_SIZE });
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
   const remove = useDeleteTransaction();
@@ -28,10 +34,12 @@ export function TransactionsPage() {
 
   const items = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const list = (query.data ?? []).filter((t) => !term || t.description.toLowerCase().includes(term) || t.categoryLabel.toLowerCase().includes(term));
+    const list = (query.data?.content ?? []).filter((t) => !term || t.description.toLowerCase().includes(term) || t.categoryLabel.toLowerCase().includes(term));
     return sort === 'amount' ? [...list].sort((a, b) => b.amount - a.amount) : list;
   }, [query.data, search, sort]);
   const total = items.reduce((sum, t) => sum + t.amount, 0);
+  const totalPages = query.data?.totalPages ?? 0;
+  const totalElements = query.data?.totalElements ?? 0;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -106,16 +114,18 @@ export function TransactionsPage() {
       <section className="card">
         <div className="card-head">
           <h2>Gastos</h2>
-          <span className="total">{money(total)}</span>
+          <span className="total" title={totalPages > 1 ? 'soma só desta página' : 'soma dos gastos listados'}>
+            {money(total)}{totalPages > 1 && <small className="muted"> nesta página</small>}
+          </span>
         </div>
         <div className="toolbar">
           <div className="month-nav">
-            <button className="btn ghost icon" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="mês anterior" disabled={allTime}>‹</button>
+            <button className="btn ghost icon" onClick={() => goToMonth(shiftMonth(month, -1))} aria-label="mês anterior" disabled={allTime}>‹</button>
             <span className="month-label">{allTime ? 'todo o período' : monthLabel(month)}</span>
-            <button className="btn ghost icon" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="próximo mês" disabled={allTime || month === currentMonth()}>›</button>
+            <button className="btn ghost icon" onClick={() => goToMonth(shiftMonth(month, 1))} aria-label="próximo mês" disabled={allTime || month === currentMonth()}>›</button>
           </div>
-          <label className="check"><input type="checkbox" checked={allTime} onChange={(e) => setAllTime(e.target.checked)} /> tudo</label>
-          <select value={filter} onChange={(e) => setFilter(e.target.value as Category | '')} aria-label="filtrar por categoria">
+          <label className="check"><input type="checkbox" checked={allTime} onChange={(e) => toggleAllTime(e.target.checked)} /> tudo</label>
+          <select value={filter} onChange={(e) => changeFilter(e.target.value as Category | '')} aria-label="filtrar por categoria">
             <option value="">todas as categorias</option>
             {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>)}
           </select>
@@ -149,6 +159,13 @@ export function TransactionsPage() {
                 ))}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <nav className="pager" aria-label="paginação">
+                <button className="btn ghost small" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || query.isFetching}>‹ anterior</button>
+                <span className="muted small">página {page + 1} de {totalPages} · {totalElements} lançamentos</span>
+                <button className="btn ghost small" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || query.isFetching}>próxima ›</button>
+              </nav>
+            )}
           </div>
         )}
       </section>

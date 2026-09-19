@@ -13,7 +13,7 @@ export const queryClient = new QueryClient({
 
 export const keys = {
   me: ['me'] as const,
-  transactions: (filters: Record<string, string | undefined>) => ['transactions', filters] as const,
+  transactions: (filters: object) => ['transactions', filters] as const,
   summary: (start?: string, end?: string) => ['summary', start ?? '', end ?? ''] as const,
   budgets: (month?: string) => ['budgets', month ?? ''] as const,
   alerts: (month?: string) => ['alerts', month ?? ''] as const,

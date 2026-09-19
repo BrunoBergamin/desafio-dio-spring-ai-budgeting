@@ -140,6 +140,6 @@ public class EvolutionApiGateway implements WhatsAppGateway {
     }
 
     static String mask(String phone) {
-        return phone == null || phone.length() < 4 ? "***" : "***" + phone.substring(phone.length() - 4);
+        return dio.budgeting.security.Masking.phone(phone);
     }
 }

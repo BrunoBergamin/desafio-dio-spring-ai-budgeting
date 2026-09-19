@@ -243,13 +243,19 @@ O `MessageChatMemoryAdvisor` roda antes do `ToolCallingAdvisor`, então o histó
 **3. O alerta de orçamento não depende do modelo lembrar.**
 Em vez de esperar a IA chamar uma segunda ferramenta, a própria `registrar_transacao` devolve a transação **e** o status do orçamento. O modelo recebe o alerta no resultado e comenta na resposta. Os limites (80% e 100%) são calculados com os valores exatos, não com o percentual arredondado: `399,99 de 500` ainda é OK. Um teste de fronteira achou esse bug.
 
-**4. Memória da JVM com teto.**
+**4. Nenhuma lista cresce sem limite, nem em RAM nem no banco.**
+A listagem de gastos é paginada no banco (50 por página, teto de 500), então uma conta com anos de histórico não vira uma resposta gigante nem um `SELECT *`. A ferramenta `listar_transacoes` pede a primeira página já limitada em 50, em vez de trazer tudo e cortar na memória.
+
+**5. Limite de requisições por minuto, sem dependência nova.**
+Login, cadastro e demo são limitados por IP (10 por minuto), o que freia tentativa de adivinhar senha. As rotas da Lumi são limitadas por usuário (20 por minuto), porque cada chamada gasta cota gratuita da Groq: sem isso, um script esvazia a cota do dia em minutos. O contador é um `Caffeine` que expira sozinho depois de um minuto, e o teste avança um relógio falso em vez de esperar. Quem passa do limite recebe `429` no mesmo formato `ProblemDetail` do resto da API, com `Retry-After`.
+
+**6. Memória da JVM com teto.**
 Tudo que fica em RAM tem limite: conversas (200), mensagens por conversa (10), ids de mensagens enviadas ao WhatsApp (500), áudio de upload (10 MB), lista que a ferramenta devolve ao modelo (50 lançamentos; para totais existe `resumo_de_gastos`, que soma no banco). O webhook do WhatsApp roda em threads virtuais (Java 21+) com no máximo 8 em paralelo; o pool do banco tem 5 conexões; no Docker o container tem `mem_limit: 640m`, a JVM lê esse teto (`MaxRAMPercentage=75`) e cai e sobe de novo se estourar (`ExitOnOutOfMemoryError`). No navegador, os áudios da conversa são liberados com `URL.revokeObjectURL` ao sair da página. Medido: cerca de 400 MB em uso.
 
-**5. A hora "de hoje" vem de um `Clock`, não do servidor.**
+**7. A hora "de hoje" vem de um `Clock`, não do servidor.**
 O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília cairia no dia seguinte, e no dia 30 o "resumo do mês" viraria o mês que vem. Existe um único bean `Clock` no fuso `America/Sao_Paulo` (`app.timezone`) e todo `LocalDate.now()` passa por ele. De quebra os testes de data ficaram determinísticos: o `TransactionServiceTest` fixa o relógio em 01:30 UTC e prova que o gasto cai no dia anterior, o de Brasília.
 
-**6. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
+**8. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
 
 **Outras:** `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o mesmo SQL servir H2 e MySQL; JWT com o suporte nativo do Spring Security (`NimbusJwtEncoder`, HS256) em vez de biblioteca extra; 401 e 403 escritos como `ProblemDetail` por um `AuthenticationEntryPoint` próprio, porque exceções de segurança acontecem antes do `@RestControllerAdvice`; frontend empacotado dentro do jar para ter uma porta só, sem CORS e um container só; token no `localStorage`, sabendo do risco de XSS (cookie `HttpOnly` seria o próximo passo); sem Kafka, porque para um app de gastos pessoais seria complexidade sem necessidade.
 
@@ -379,7 +385,7 @@ Resposta real do passo 3 (o texto varia conforme o modelo):
 | POST | `/api/auth/demo` | Token da conta de demonstração, sem senha (público; 404 com o modo demo desligado) |
 | POST | `/api/auth/register` · `/api/auth/login` | Conta e token JWT (público) |
 | GET | `/api/auth/me` | Usuário autenticado |
-| POST/GET | `/api/transactions` | Registra · lista (`?category=&start=&end=`) |
+| POST/GET | `/api/transactions` | Registra · lista paginada (`?category=&start=&end=&page=0&size=50`, teto de 500) |
 | GET | `/api/transactions/summary` | Total e percentual por categoria (padrão: mês atual) |
 | GET/PUT/DELETE | `/api/transactions/{id}` | Busca · atualiza · remove (só do próprio usuário) |
 | POST/GET | `/api/budgets` | Define · lista limites do mês com quanto já foi gasto |

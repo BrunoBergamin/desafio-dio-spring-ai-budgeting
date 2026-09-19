@@ -14,13 +14,15 @@ export function DashboardPage() {
   const summary = useSummary(range.start, range.end);
   const before = useSummary(previous.start, previous.end);
   const budgets = useBudgets(month);
-  const transactions = useTransactions({ start: range.start, end: range.end });
+  // O grafico diario precisa do mes inteiro: uma pagina grande (o teto da API e 500)
+  const transactions = useTransactions({ start: range.start, end: range.end, size: 500 });
 
   const total = summary.data?.total ?? 0;
   const delta = before.data ? percentDelta(total, before.data.total) : null;
   const top = summary.data?.categories[0];
   const exceeded = budgets.data?.filter((b) => b.status !== 'OK').length ?? 0;
-  const recent = (transactions.data ?? []).slice(0, 6);
+  const monthTransactions = transactions.data?.content ?? [];
+  const recent = monthTransactions.slice(0, 6);
   const isCurrent = month === currentMonth();
 
   return (
@@ -53,7 +55,7 @@ export function DashboardPage() {
         </section>
         <section className="card">
           <div className="card-head"><h3>Por dia</h3></div>
-          {transactions.isLoading ? <Skeleton lines={5} height={18} /> : <DailyChart transactions={transactions.data ?? []} month={month} />}
+          {transactions.isLoading ? <Skeleton lines={5} height={18} /> : <DailyChart transactions={monthTransactions} month={month} />}
         </section>
       </div>
 

@@ -1,14 +1,15 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { budgetsApi, transactionsApi } from '../api/endpoints';
+import { budgetsApi, transactionsApi, type TransactionFilters } from '../api/endpoints';
 import type { Category, TransactionRequest } from '../api/types';
 import { invalidateFinancial, keys } from '../lib/queryClient';
 
 /** Hooks de dados: cada tela declara o que precisa; o React Query cuida de cache, loading e refetch. */
 
-export function useTransactions(filters: { category?: Category; start?: string; end?: string }) {
+export function useTransactions(filters: TransactionFilters) {
   return useQuery({
     queryKey: keys.transactions(filters),
     queryFn: () => transactionsApi.list(filters),
+    placeholderData: (previous) => previous, // ao trocar de pagina a tabela nao pisca
   });
 }
 

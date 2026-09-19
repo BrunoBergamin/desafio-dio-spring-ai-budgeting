@@ -51,8 +51,12 @@ Content-Type: application/json
   "date": "2099-01-01"
 }
 
-### Listar (filtros opcionais)
+### Listar (filtros opcionais; resposta paginada em "content")
 GET {{base}}/transactions?category=GROCERIES&start=2026-09-01&end=2026-09-30
+Authorization: Bearer {{token}}
+
+### Listar a segunda pagina, 10 por pagina
+GET {{base}}/transactions?page=1&size=10
 Authorization: Bearer {{token}}
 
 ### Resumo do mês atual
