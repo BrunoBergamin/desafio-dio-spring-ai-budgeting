@@ -33,6 +33,7 @@ public class TransactionMapper {
                 transaction.getCategory(),
                 transaction.getCategory().getLabel(),
                 transaction.getType(),
+                transaction.getRecurring() == null ? null : transaction.getRecurring().getId(),
                 transaction.getDate());
     }
 }

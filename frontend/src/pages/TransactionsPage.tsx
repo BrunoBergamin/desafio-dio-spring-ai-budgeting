@@ -167,7 +167,10 @@ export function TransactionsPage() {
                 {items.map((t) => (
                   <tr key={t.id} className={editing?.id === t.id ? 'editing' : ''}>
                     <td className="nowrap">{shortDate(t.date)}</td>
-                    <td>{t.description}</td>
+                    <td>
+                      {t.description}
+                      {t.recurringId && <span className="pill inline" title="lançamento de uma conta fixa">🔁</span>}
+                    </td>
                     <td className="nowrap"><span aria-hidden>{categoryEmoji(t.category)}</span> {t.categoryLabel}</td>
                     <td className={`num ${t.type === 'INCOME' ? 'income' : ''}`}>{t.type === 'INCOME' ? '+' : ''}{money(t.amount)}</td>
                     <td className="num nowrap">

@@ -6,6 +6,7 @@ const links = [
   { to: '/painel', label: 'Painel', icon: '📊' },
   { to: '/conversa', label: 'Lumi', icon: '✨' },
   { to: '/transacoes', label: 'Gastos', icon: '🧾' },
+  { to: '/recorrentes', label: 'Recorrentes', icon: '🔁' },
   { to: '/orcamentos', label: 'Orçamentos', icon: '🎯' },
   { to: '/whatsapp', label: 'WhatsApp', icon: '💬' },
 ];

@@ -53,6 +53,11 @@ public class Transaction {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    /** Preenchido quando o lançamento foi criado por uma conta recorrente; nulo quando foi lançado à mão. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_id")
+    private RecurringTransaction recurring;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 

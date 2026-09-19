@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { budgetsApi, transactionsApi, type TransactionFilters } from '../api/endpoints';
-import type { ExpenseCategory, TransactionRequest } from '../api/types';
+import { budgetsApi, recurringApi, transactionsApi, type TransactionFilters } from '../api/endpoints';
+import type { ExpenseCategory, RecurringRequest, TransactionRequest } from '../api/types';
 import { invalidateFinancial, keys } from '../lib/queryClient';
 
 /** Hooks de dados: cada tela declara o que precisa; o React Query cuida de cache, loading e refetch. */
@@ -38,6 +38,25 @@ export function useUpdateTransaction() {
 
 export function useDeleteTransaction() {
   return useMutation({ mutationFn: (id: string) => transactionsApi.remove(id), onSuccess: invalidateFinancial });
+}
+
+export function useRecurring() {
+  return useQuery({ queryKey: keys.recurring, queryFn: recurringApi.list });
+}
+
+export function useCreateRecurring() {
+  return useMutation({ mutationFn: (body: RecurringRequest) => recurringApi.create(body), onSuccess: invalidateFinancial });
+}
+
+export function useUpdateRecurring() {
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: RecurringRequest }) => recurringApi.update(id, body),
+    onSuccess: invalidateFinancial,
+  });
+}
+
+export function useDeleteRecurring() {
+  return useMutation({ mutationFn: (id: string) => recurringApi.remove(id), onSuccess: invalidateFinancial });
 }
 
 export function useCreateBudget() {

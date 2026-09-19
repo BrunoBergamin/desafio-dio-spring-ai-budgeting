@@ -2,6 +2,7 @@ package dio.budgeting.config;
 
 import dio.budgeting.service.BoundedChatMemoryRepository;
 import dio.budgeting.tool.BudgetTools;
+import dio.budgeting.tool.RecurringTools;
 import dio.budgeting.tool.TransactionTools;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -34,9 +35,9 @@ public class ChatClientConfig {
     /** O ChatClient fica configurado em um único lugar, com as ferramentas e a memória registradas. */
     @Bean
     ChatClient chatClient(ChatClient.Builder builder, TransactionTools transactionTools,
-                          BudgetTools budgetTools, ChatMemory chatMemory) {
+                          BudgetTools budgetTools, RecurringTools recurringTools, ChatMemory chatMemory) {
         return builder
-                .defaultTools(transactionTools, budgetTools)
+                .defaultTools(transactionTools, budgetTools, recurringTools)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
     }

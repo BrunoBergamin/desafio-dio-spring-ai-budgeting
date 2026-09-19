@@ -34,7 +34,7 @@ class ExpenseServiceTest {
     @Test
     void should_returnBudgetStatus_when_categoryHasBudget() {
         var request = new TransactionRequest("Mercado", new BigDecimal("50"), Category.GROCERIES, LocalDate.of(2026, 9, 10));
-        var created = new TransactionResponse(UUID.randomUUID(), "Mercado", new BigDecimal("50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, LocalDate.of(2026, 9, 10));
+        var created = new TransactionResponse(UUID.randomUUID(), "Mercado", new BigDecimal("50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, null, LocalDate.of(2026, 9, 10));
         when(transactionService.create(USER, request)).thenReturn(created);
         when(budgetService.checkAfterExpense(USER, Category.GROCERIES, LocalDate.of(2026, 9, 10)))
                 .thenReturn(Optional.of(status(BudgetStatus.EXCEEDED)));
@@ -49,7 +49,7 @@ class ExpenseServiceTest {
     void should_returnNullBudget_when_categoryHasNoBudget() {
         var request = new TransactionRequest("Uber", new BigDecimal("20"), Category.TRANSPORT, null);
         when(transactionService.create(any(), any())).thenReturn(
-                new TransactionResponse(UUID.randomUUID(), "Uber", new BigDecimal("20"), Category.TRANSPORT, "Transporte", TransactionType.EXPENSE, LocalDate.now()));
+                new TransactionResponse(UUID.randomUUID(), "Uber", new BigDecimal("20"), Category.TRANSPORT, "Transporte", TransactionType.EXPENSE, null, LocalDate.now()));
         when(budgetService.checkAfterExpense(any(), any(), any())).thenReturn(Optional.empty());
 
         assertThat(service.register(USER, request).budget()).isNull();
@@ -60,7 +60,7 @@ class ExpenseServiceTest {
         var request = new TransactionRequest("Salário", new BigDecimal("5200"), Category.SALARY, null);
         when(transactionService.create(USER, request)).thenReturn(new TransactionResponse(
                 UUID.randomUUID(), "Salário", new BigDecimal("5200"), Category.SALARY, "Salário",
-                TransactionType.INCOME, LocalDate.of(2026, 9, 5)));
+                TransactionType.INCOME, null, LocalDate.of(2026, 9, 5)));
 
         var result = service.register(USER, request);
 

@@ -6,6 +6,7 @@ import dio.budgeting.entity.TransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
@@ -38,6 +39,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                              LocalDate start, LocalDate end, Pageable pageable);
 
     List<Transaction> findTop5ByUserIdOrderByDateDescCreatedAtDesc(UUID userId);
+
+    /**
+     * Solta os lancamentos de uma conta recorrente antes de ela ser apagada. O banco tem
+     * ON DELETE SET NULL como rede de seguranca, mas fazer aqui deixa o Hibernate ciente da mudanca
+     * e nao depende do comportamento da FK em cada banco.
+     */
+    @Modifying
+    @Query("update Transaction t set t.recurring = null where t.recurring.id = :recurringId")
+    int unlinkRecurring(UUID recurringId);
 
     /** Gastos agrupados por categoria. Recebe o tipo para a pizza do painel nao misturar salario com mercado. */
     @Query("""
