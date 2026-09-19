@@ -23,6 +23,8 @@ export const authApi = {
   me: () => api.get<UserResponse>('/auth/me').then((r) => r.data),
   /** Entra na conta de demonstracao sem senha (404 quando o modo demo esta desligado). */
   demo: () => api.post<AuthResponse>('/auth/demo').then((r) => r.data),
+  /** Só o servidor apaga o cookie HttpOnly do token. */
+  logout: () => api.post<void>('/auth/logout').then((r) => r.data),
   linkPhone: (phone: string) => api.put<UserResponse>('/auth/me/phone', { phone }).then((r) => r.data),
 };
 

@@ -1,51 +1,25 @@
 import axios, { AxiosError } from 'axios';
 import type { ProblemDetail } from './types';
 
-export const TOKEN_KEY = 'lumi.token';
-
-export const api = axios.create({ baseURL: '/api' });
-
-api.interceptors.request.use((config) => {
-  const token = readToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+/**
+ * O token nao passa mais pelo JavaScript: ele chega num cookie HttpOnly que o navegador guarda e
+ * reenvia sozinho. Por isso `withCredentials` e nenhuma funcao de ler ou salvar token por aqui.
+ * Como o frontend e servido pela propria API (e o Vite faz proxy de /api em desenvolvimento),
+ * tudo e mesma origem e o cookie viaja normalmente.
+ */
+export const api = axios.create({ baseURL: '/api', withCredentials: true });
 
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ProblemDetail>) => {
-    // Token vencido ou invalido: volta para o login (exceto na propria tela de login)
+    // Token vencido ou invalido: volta para o login. As rotas /auth/ ficam de fora porque o 401 do
+    // /auth/me na abertura do site e esperado: e ele que decide entre modo demo e tela de login.
     if (error.response?.status === 401 && !error.config?.url?.startsWith('/auth/')) {
-      clearToken();
       if (window.location.pathname !== '/login') window.location.assign('/login');
     }
     return Promise.reject(error);
   },
 );
-
-export function readToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function saveToken(token: string) {
-  try {
-    localStorage.setItem(TOKEN_KEY, token);
-  } catch {
-    /* modo privado: segue sem persistir */
-  }
-}
-
-export function clearToken() {
-  try {
-    localStorage.removeItem(TOKEN_KEY);
-  } catch {
-    /* ignore */
-  }
-}
 
 /** Extrai uma mensagem legivel de um erro da API (ProblemDetail) ou de rede. */
 export function errorMessage(error: unknown, fallback = 'Algo deu errado. Tente de novo.'): string {

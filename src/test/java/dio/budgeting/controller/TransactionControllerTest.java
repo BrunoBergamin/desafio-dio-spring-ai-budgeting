@@ -9,6 +9,7 @@ import dio.budgeting.exception.ResourceNotFoundException;
 import dio.budgeting.security.AppUserDetailsService;
 import dio.budgeting.service.TransactionService;
 import dio.budgeting.support.SecuredWebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SecuredWebMvcTest(TransactionController.class)
+@Import(dio.budgeting.security.JwtService.class)
 class TransactionControllerTest {
 
     static final String USER_ID = "11111111-1111-1111-1111-111111111111";
@@ -42,6 +44,27 @@ class TransactionControllerTest {
 
     @MockitoBean
     AppUserDetailsService userDetailsService;
+
+    /** Emite um JWT de verdade, para o teste exercitar o decoder real e nao um token de mentira. */
+    @Autowired
+    dio.budgeting.security.JwtService jwtService;
+
+    /** O site nao manda header nenhum: prova que o cookie sozinho autentica na cadeia real de seguranca. */
+    @Test
+    void should_authenticate_when_theTokenComesOnlyInTheCookie() throws Exception {
+        var userId = UUID.randomUUID();
+        var token = jwtService.generate(new dio.budgeting.entity.User("Bruno", "bruno@email.com", "hash") {
+            @Override
+            public UUID getId() {
+                return userId;
+            }
+        });
+        when(transactionService.list(eq(userId), any(), any(), any(), any(), eq(0), eq(50)))
+                .thenReturn(new PageResponse<>(java.util.List.of(), 0, 50, 0, 0));
+
+        mockMvc.perform(get("/api/transactions").cookie(new jakarta.servlet.http.Cookie("lumi_token", token)))
+                .andExpect(status().isOk());
+    }
 
     @Test
     void should_return401WithProblemDetail_when_tokenIsMissing() throws Exception {

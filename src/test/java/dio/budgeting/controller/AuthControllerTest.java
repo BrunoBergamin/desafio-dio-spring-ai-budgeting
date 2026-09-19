@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -107,5 +108,47 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("bruno@email.com"));
+    }
+
+    @Test
+    void should_alsoSendTheTokenInAnHttpOnlyCookie_when_loggingIn() throws Exception {
+        when(authService.login(any())).thenReturn(AuthResponse.bearer("token-jwt", 28800,
+                new UserResponse(UUID.fromString(USER_ID), "Bruno", "bruno@email.com", null)));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "bruno@email.com", "password": "senha-forte-123"}
+                                """))
+                .andExpect(status().isOk())
+                // O corpo continua trazendo o token, para Swagger e curl
+                .andExpect(jsonPath("$.token").value("token-jwt"))
+                // e o site recebe o mesmo token num cookie que o JavaScript nao le
+                .andExpect(header().string("Set-Cookie",
+                        org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("lumi_token=token-jwt"),
+                                org.hamcrest.Matchers.containsString("HttpOnly"),
+                                org.hamcrest.Matchers.containsString("SameSite=Strict"),
+                                org.hamcrest.Matchers.containsString("Path=/api"),
+                                org.hamcrest.Matchers.containsString("Max-Age=28800"))));
+    }
+
+    @Test
+    void should_sendTheCookie_when_enteringTheDemoAccount() throws Exception {
+        when(authService.demoLogin()).thenReturn(AuthResponse.bearer("token-demo", 28800,
+                new UserResponse(UUID.fromString(USER_ID), "Bruno (demo)", "demo@lumi.local", null)));
+
+        mockMvc.perform(post("/api/auth/demo"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("lumi_token=token-demo")));
+    }
+
+    @Test
+    void should_clearTheCookie_when_loggingOut() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")));
+
+        verifyNoInteractions(authService);
     }
 }

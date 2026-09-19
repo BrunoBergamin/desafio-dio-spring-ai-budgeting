@@ -31,7 +31,7 @@ public class ProblemDetailResponses implements AuthenticationEntryPoint, AccessD
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException exception) throws IOException {
         write(response, request, HttpStatus.UNAUTHORIZED, "Não autenticado",
-                "envie um token JWT válido no header Authorization: Bearer <token>");
+                "entre na sua conta; a API aceita o token no header Authorization: Bearer <token> ou no cookie de sessão");
     }
 
     @Override
