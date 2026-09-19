@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { authApi, whatsappApi } from '../api/endpoints';
@@ -31,16 +31,23 @@ export function WhatsAppPage() {
   });
   const unavailable = axios.isAxiosError(status.error) && status.error.response?.status === 404;
 
+  const connected = status.data?.connected ?? false;
+  // Conectado, o QR não serve mais: some por dedução, sem precisar de um setState dentro do efeito
+  const showQr = connected ? null : qr;
+  /** Marcado ao pedir o QR: só avisa quem estava no meio do pareamento, não quem abriu a página já conectado. */
+  const pairing = useRef(false);
+
   useEffect(() => {
-    if (status.data?.connected && qr) {
-      setQr(null);
+    if (connected && pairing.current) {
+      pairing.current = false;
       notify('success', 'WhatsApp conectado! Mande um "oi" para a Lumi.');
     }
-  }, [status.data?.connected, qr, notify]);
+  }, [connected, notify]);
 
   const connect = useMutation({
     mutationFn: whatsappApi.connect,
     onSuccess: (info) => {
+      pairing.current = true;
       setQr({ image: info.qrCodeBase64, pairingCode: info.pairingCode });
       qc.setQueryData(keys.whatsapp, info);
     },
@@ -114,9 +121,9 @@ export function WhatsAppPage() {
               Use um chip que não seja o seu pessoal (a Evolution API não é oficial). No celular: WhatsApp →
               Aparelhos conectados → Conectar aparelho → escaneie o código. Ele expira em cerca de 40 segundos.
             </p>
-            {qr?.image ? (
+            {showQr?.image ? (
               <div className="qr-box">
-                <img className="qr" src={qr.image} alt="QR code para conectar o WhatsApp" />
+                <img className="qr" src={showQr.image} alt="QR code para conectar o WhatsApp" />
                 <button className="btn ghost small" onClick={() => connect.mutate()} disabled={connect.isPending}>gerar outro</button>
               </div>
             ) : (
@@ -124,7 +131,7 @@ export function WhatsAppPage() {
                 {connect.isPending ? 'Gerando…' : 'Gerar QR code'}
               </button>
             )}
-            {qr?.pairingCode && <p className="muted small">Código de pareamento: <b>{qr.pairingCode}</b></p>}
+            {showQr?.pairingCode && <p className="muted small">Código de pareamento: <b>{showQr.pairingCode}</b></p>}
           </div>
         )}
       </section>
