@@ -21,12 +21,12 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-225%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%204%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
-[![Cobertura](https://img.shields.io/badge/cobertura-76%25%20(JaCoCo)-success?style=flat-square)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-225%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%205%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Cobertura](https://img.shields.io/badge/cobertura-77%25%20(JaCoCo)-success?style=flat-square)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
-[Rodar com Docker](#-rodando-com-um-comando-docker) · [WhatsApp](#-falando-com-a-lumi-pelo-whatsapp) · [Prints](#-a-aplicação-rodando) · [Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura) · [Decisões](#-decisões-que-tomei) · [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) · [Rodar sem Docker](#️-rodando-sem-docker) · [Endpoints](#endpoints) · [Testes](#-testes-automatizados) · [Como usei IA](#-como-usei-ia-para-construir-o-projeto) · [O que aprendi](#-o-que-aprendi)
+[Rodar com Docker](#-rodando-com-um-comando-docker) · [Publicar de graça](#️-colocando-no-ar-de-graça) · [WhatsApp](#-falando-com-a-lumi-pelo-whatsapp) · [Prints](#-a-aplicação-rodando) · [Fluxo](#-fluxo-principal) · [Arquitetura](#️-arquitetura) · [Decisões](#-decisões-que-tomei) · [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) · [Rodar sem Docker](#️-rodando-sem-docker) · [Endpoints](#endpoints) · [Testes](#-testes-automatizados) · [Como usei IA](#-como-usei-ia-para-construir-o-projeto) · [O que aprendi](#-o-que-aprendi)
 
 </div>
 
@@ -61,7 +61,7 @@ Eu não sou expert em Spring nem em IA. Estou aprendendo, e este projeto foi fei
 |---|---|---|
 | **O que o projeto faz** | Recebe voz ou texto; a Lumi entende a intenção, executa uma função real (Tool Calling), grava ou consulta no banco e responde. | [Fluxo](#-fluxo-principal) |
 | **Como executar** | `docker compose up --build` (um comando) ou `./mvnw spring-boot:run`. | [Rodar](#-rodando-com-um-comando-docker) |
-| **Qual melhoria implementei** | 24 evoluções sobre o projeto base, da validação no caminho da IA até WhatsApp, frontend e modo demo sem senha. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
+| **Qual melhoria implementei** | 33 evoluções sobre o projeto base, da validação no caminho da IA até WhatsApp, receitas e saldo, contas recorrentes, metas, relatório e cookie `HttpOnly`. | [Melhorias](#-o-que-evoluí-sobre-o-projeto-base) |
 | **Tecnologias** | Java 25, Spring Boot 4.1, Spring AI 2.0, Spring Security 7, JPA + Flyway, React 19, Docker, GitHub Actions. | [Tecnologias](#️-tecnologias) |
 | **Como testar o fluxo principal** | Pelo navegador (microfone), pelo WhatsApp, pelo Swagger ou por `curl`, com áudios de exemplo no repositório. | [Como testar](#-como-testar-o-fluxo-principal) |
 | **O que aprendi** | Dezessete coisas, incluindo dois bugs de biblioteca que precisei contornar. | [O que aprendi](#-o-que-aprendi) |
@@ -87,6 +87,40 @@ Abra **http://localhost:8080** e fale com a Lumi. **Não precisa criar conta nem
 - Quer começar do zero? `docker compose down -v` apaga o volume do banco e a conta demo é recriada na próxima subida.
 - A hora "de hoje" é a de Brasília (`app.timezone`), e não a do container: um gasto registrado às 23h cai no dia certo.
 - A imagem final roda como usuário sem privilégio (`lumi`), tem `HEALTHCHECK` e pesa cerca de 800 MB (JRE 25 + Ubuntu).
+
+---
+
+## ☁️ Colocando no ar de graça
+
+O projeto roda inteiro na sua máquina com um comando, mas dá para publicar sem pagar nada. A imagem já é gerada e publicada pelo GitHub Actions em todo push na `main`, em `ghcr.io/brunobergamin/desafio-dio-spring-ai-budgeting:latest`, então o provedor só precisa puxar a imagem pronta.
+
+O que é preciso ter (os dois com plano gratuito, sem cartão):
+
+| Peça | Onde | O que o plano gratuito dá |
+|------|------|---------------------------|
+| Aplicação | [Koyeb](https://www.koyeb.com/) | 1 serviço, 512 MB, dorme depois de 1 h sem acesso |
+| Banco | [Aiven para MySQL](https://aiven.io/free-mysql-database) | 1 GB de RAM e 1 GB de disco, sempre ligado |
+
+No Koyeb, crie o serviço a partir da imagem do GHCR, porta 8080, health check em `/actuator/health`, e preencha as variáveis:
+
+```bash
+SPRING_PROFILES_ACTIVE=groq,mysql
+GROQ_API_KEY=...                  # a mesma chave gratuita do .env
+APP_JWT_SECRET=...                # openssl rand -base64 48
+DB_URL=jdbc:mysql://HOST:PORT/defaultdb?sslMode=REQUIRED
+DB_USER=avnadmin
+DB_PASSWORD=...
+APP_DEMO_ENABLED=true             # para quem abrir o link já ver o painel cheio
+JAVA_OPTS=-XX:MaxRAMPercentage=60 -Xss512k -XX:TieredStopAtLevel=1 -XX:+UseSerialGC
+```
+
+Três coisas que aprendi preparando isso:
+
+- **512 MB é apertado para a JVM.** Sem apertar as opções, o container morre na subida. O `JAVA_OPTS` acima deixa espaço para o resto do processo, e dá para conferir o consumo real em `/actuator/metrics/jvm.memory.used`.
+- **O banco gerenciado exige TLS**, daí o `sslMode=REQUIRED` na URL. O perfil `mysql` já lê usuário, senha e URL de variáveis, então não precisa mexer em código.
+- **O WhatsApp fica de fora do deploy.** A Evolution API precisaria de outro serviço e de um banco próprio, o que não cabe no plano gratuito. No computador ele continua funcionando com `--profile whatsapp`.
+
+O primeiro acesso depois de um tempo parado demora, porque o serviço dorme e precisa subir de novo.
 
 ---
 
@@ -294,12 +328,12 @@ O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília c
 | 3 | **Bug de centavos corrigido**: o base mostrava 80 reais como `8000.0`. Valores em `BigDecimal`. | `Transaction` |
 | 4 | **Login e multiusuário com JWT** (Spring Security 7): cada pessoa só vê os próprios gastos; transação de outra pessoa responde 404, não 403. | `SecurityConfig`, `AuthService`, `JwtService` |
 | 5 | **Usuário no Tool Calling via `ToolContext`**, com teste que tenta burlar. | `ToolUser`, `TransactionTools` |
-| 6 | **Memória de conversa** (`MessageWindowChatMemory`): "e o de ontem?" funciona; chave por usuário; `DELETE /api/assistant/conversation`. | `LumiChat`, `ConversationKey` |
+| 6 | **Memória de conversa** no banco (`JdbcChatMemoryRepository` + `MessageWindowChatMemory`): "e o de ontem?" funciona e sobrevive ao restart; chave por usuário; `DELETE /api/assistant/conversation`. | `LumiChat`, `ConversationKey` |
 | 7 | **Orçamento mensal por categoria com alertas** (OK / atenção / estourado) e 4 ferramentas novas para a Lumi. | `BudgetService`, `BudgetTools` |
 | 8 | **Alerta entregue junto do registro do gasto**, sem ida e volta extra ao modelo. | `ExpenseService` |
 | 9 | **Migrations com Flyway** (8 versões, SQL que serve H2 e MySQL) e `ddl-auto=validate`; os testes de repositório rodam sobre as migrations. | `db/migration`, `@JpaTest` |
 | 10 | **Frontend React 19 + Vite + TypeScript**: painel com indicadores e dois gráficos, chat com microfone, upload e arrastar-e-soltar de áudio (aceita as notas de voz do WhatsApp), histórico, tema claro/escuro, notificações, edição inline, navegação por mês, layout de celular com menu inferior. React Query para cache, 10 testes com Vitest. | `frontend/`, `SpaForwardController` |
-| 11 | **Docker em 3 estágios** (Node → Maven → JRE), usuário não-root, `HEALTHCHECK`, `compose` com MySQL persistente e Evolution opcional. | `Dockerfile`, `compose.yml` |
+| 11 | **Docker em 3 estágios** (Node → Maven → JRE), usuário não-root, `HEALTHCHECK`, `compose` com MySQL persistente e Evolution opcional, imagem publicada no GHCR a cada push na `main`. | `Dockerfile`, `compose.yml`, `ci.yml` |
 | 12 | **CI no GitHub Actions**: backend, frontend e imagem Docker, verde sem nenhum segredo. | `.github/workflows/ci.yml` |
 | 13 | **Actuator** (`health`, `info`, `metrics`) e prefixo `/api` em todos os endpoints. | `WebMvcConfig`, `application.properties` |
 | 14 | **Perfil gratuito (`groq`)**: mesma aplicação, só configuração; text-to-speech opcional (503 explicado). | `application-groq.properties` |
@@ -310,9 +344,18 @@ O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília c
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
 | 20 | **236 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA) e cobertura com JaCoCo. | `src/test` |
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, chat "Você", áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
-| 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. | `Category` |
+| 22 | **20 categorias** (16 de gasto e 4 de receita) com um guia no schema da ferramenta para o modelo classificar melhor. | `Category` |
 | 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
 | 24 | **Memória sob controle**: conversa guardada no banco com limpeza por tempo, threads virtuais com limite de paralelismo, listas paginadas, `mem_limit` no compose e JVM que respeita o container. | `ChatMemoryCleanup`, `application.properties`, `compose.yml` |
+| 25 | **Receitas e saldo**: a categoria define se o lançamento é gasto ou receita, e o painel mostra quanto entrou, quanto saiu e o que sobrou. | `TransactionType`, `Category`, `DashboardPage.tsx` |
+| 26 | **Contas recorrentes**: aluguel, streaming e salário lançados sozinhos todo mês, com acerto dos meses perdidos quando o app fica desligado. | `RecurringTransactionService`, `RecurringPage.tsx` |
+| 27 | **Metas de economia** com prazo, progresso e quanto guardar por mês; guardar dinheiro não vira gasto. | `SavingsGoalService`, `GoalsPage.tsx` |
+| 28 | **Exportar CSV** que abre certo no Excel em português e **relatório do mês** numa chamada só, que a Lumi sabe narrar. | `CsvExporter`, `ReportService` |
+| 29 | **Token em cookie `HttpOnly`**, fora do alcance do JavaScript, sem perder o Bearer no Swagger e no curl. | `AuthCookies`, `CookieOrBearerTokenResolver` |
+| 30 | **Paginação, limite de requisições por minuto e logs sem dado pessoal**; console do H2 só no perfil `dev`. | `PageResponse`, `RateLimitFilter` |
+| 31 | **Fuso de Brasília em um `Clock` só**, então gasto às 23h cai no dia certo mesmo com o container em UTC. | `ClockConfig` |
+| 32 | **MySQL como banco padrão** no Docker, com as migrations testadas num MySQL real (Testcontainers). | `compose.yml`, `MySqlMigrationsIT` |
+| 33 | **Cobertura com JaCoCo, ESLint no CI e Dependabot**, além da imagem publicada no GHCR a cada push. | `pom.xml`, `ci.yml`, `dependabot.yml` |
 
 ---
 
@@ -439,7 +482,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 
 ```bash
 ./mvnw test      # 225 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
-./mvnw verify    # + 4 num MySQL real (Testcontainers, precisa do Docker) + 9 de ponta a ponta com a IA
+./mvnw verify    # + 5 num MySQL real (Testcontainers, precisa do Docker) + 9 de ponta a ponta com a IA
                  #   (os de IA só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir no ambiente)
 ```
 
@@ -463,7 +506,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 
 Resultado local: **225 no backend + 13 no frontend** sem chave; **236** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
 
-**Cobertura (JaCoCo).** O `./mvnw verify` gera `target/site/jacoco/index.html` e falha se a cobertura de linhas cair abaixo de 70%. A medição é só onde mora regra de negócio (`service`, `tool`, `security`, `mapper`, `whatsapp`): DTO, entidade e configuração são declarativos e só inflariam o número. Hoje está em **76%**, e a parte menos coberta é o cliente HTTP da Evolution, que precisaria de um servidor falso para valer a pena.
+**Cobertura (JaCoCo).** O `./mvnw verify` gera `target/site/jacoco/index.html` e falha se a cobertura de linhas cair abaixo de 70%. A medição é só onde mora regra de negócio (`service`, `tool`, `security`, `mapper`, `whatsapp`): DTO, entidade e configuração são declarativos e só inflariam o número. Hoje está em **77%**, e a parte menos coberta é o cliente HTTP da Evolution, que precisaria de um servidor falso para valer a pena.
 
 **Qualidade do frontend.** `npm run lint` (ESLint 9 com as regras de hooks do React) roda no CI antes do build. Ele achou coisas que o TypeScript não vê: um `ref` sendo escrito durante a renderização no chat e um `setState` dentro de efeito na página do WhatsApp, os dois já corrigidos.
 
