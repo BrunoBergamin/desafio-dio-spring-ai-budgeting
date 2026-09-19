@@ -43,12 +43,14 @@ class MySqlMigrationsIT {
     static final MySQLContainer MYSQL = new MySQLContainer("mysql:9.6");
 
     @Autowired Flyway flyway;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     @Autowired UserRepository userRepository;
     @Autowired TransactionRepository transactionRepository;
     @Autowired BudgetRepository budgetRepository;
 
     @BeforeEach
     void cleanUp() {
+        jdbcTemplate.update("DELETE FROM SPRING_AI_CHAT_MEMORY");
         transactionRepository.deleteAll();
         budgetRepository.deleteAll();
         userRepository.deleteAll();
@@ -59,8 +61,8 @@ class MySqlMigrationsIT {
         var info = flyway.info();
 
         assertThat(info.pending()).isEmpty();
-        assertThat(info.applied()).hasSizeGreaterThanOrEqualTo(5);
-        assertThat(info.current().getVersion().getVersion()).isEqualTo("5");
+        assertThat(info.applied()).hasSizeGreaterThanOrEqualTo(8);
+        assertThat(info.current().getVersion().getVersion()).isEqualTo("8");
     }
 
     @Test
@@ -101,6 +103,20 @@ class MySqlMigrationsIT {
         assertThat(soMercadoEmSetembro.getContent()).extracting(Transaction::getDescription).containsExactly("Mercado");
         assertThat(transactionRepository.sumAmountByType(user.getId(), TransactionType.INCOME,
                 LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30))).isEqualByComparingTo("5200.00");
+    }
+
+    /** A tabela da memoria da Lumi tem a chave maior que o padrao do Spring AI; vale conferir no MySQL. */
+    @Test
+    void should_acceptTheLongConversationKey_when_databaseIsMySql() {
+        var key = "11111111-1111-1111-1111-111111111111:conversa-do-whatsapp";
+        jdbcTemplate.update("""
+                INSERT INTO SPRING_AI_CHAT_MEMORY (conversation_id, content, type, timestamp, sequence_id)
+                VALUES (?, 'gastei 80 reais no mercado', 'USER', CURRENT_TIMESTAMP, 1)
+                """, key);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT content FROM SPRING_AI_CHAT_MEMORY WHERE conversation_id = ?", String.class, key))
+                .isEqualTo("gastei 80 reais no mercado");
     }
 
     @Test
