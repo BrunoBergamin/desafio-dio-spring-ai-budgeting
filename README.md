@@ -21,7 +21,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-226%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%204%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-225%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%204%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![Cobertura](https://img.shields.io/badge/cobertura-76%25%20(JaCoCo)-success?style=flat-square)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
@@ -209,7 +209,8 @@ Mantive a organização em camadas que aprendi na trilha: controller, service, r
 ```
 src/main/java/dio/budgeting
 ├── controller/   AuthController, TransactionController, BudgetController, AssistantController, WhatsAppController  (prefixo /api)
-├── service/      AuthService, TransactionService, BudgetService, ExpenseService, AssistantService, LumiChat, BoundedChatMemoryRepository
+├── service/      AuthService, TransactionService, BudgetService, ExpenseService, RecurringTransactionService,
+│                 SavingsGoalService, ReportService, AssistantService, LumiChat, CsvExporter, ChatMemoryCleanup
 ├── tool/         TransactionTools, BudgetTools, ToolUser   (@Tool: a ponte entre a IA e os services)
 ├── whatsapp/     WhatsAppGateway (interface), EvolutionApiGateway, WhatsAppService, WhatsAppProperties
 ├── demo/         DemoProperties, DemoDataSeeder   (conta demo com dados fictícios)
@@ -239,7 +240,7 @@ Algumas coisas eu decidi com base no que estudei, outras descobri errando. Aqui 
 Se o `userId` fosse um parâmetro da ferramenta, o modelo poderia "inventar" um id e ler os dados de outra pessoa. O Spring AI permite receber um `ToolContext` no método `@Tool` que **não entra no JSON Schema** enviado ao modelo, então a IA não vê e não consegue preencher o usuário. Tem um teste que manda um `userId` falso nos argumentos e prova que ele é ignorado (`TransactionToolsTest.should_ignoreUserIdSentByTheModel`). Além disso o repositório filtra por usuário e o `ToolUser.require` lança erro se o contexto vier vazio.
 
 **2. A memória de conversa fica fora do loop de ferramentas.**
-O `MessageChatMemoryAdvisor` roda antes do `ToolCallingAdvisor`, então o histórico guarda só o par pergunta/resposta e não as idas e vindas das ferramentas. Isso economiza tokens. A chave da memória é `userId:conversa`, montada a partir do JWT, então ninguém lê a conversa de outra pessoa. A memória fica em RAM com janela de 10 mensagens: some no restart e não funciona com várias instâncias, e eu sei disso (está em "Próximos passos"). Como o id da conversa vem do cliente, a janela sozinha não bastaria: um `BoundedChatMemoryRepository` guarda no máximo 200 conversas e descarta a parada há mais tempo.
+O `MessageChatMemoryAdvisor` roda antes do `ToolCallingAdvisor`, então o histórico guarda só o par pergunta/resposta e não as idas e vindas das ferramentas. Isso economiza tokens. A chave da memória é `userId:conversa`, montada a partir do JWT, então ninguém lê a conversa de outra pessoa. A memória fica no banco (`JdbcChatMemoryRepository`), com janela de 10 mensagens no prompt: a Lumi lembra do contexto mesmo depois de reiniciar, e um `@Scheduled` diário apaga o que passou de 30 dias.
 
 **3. O alerta de orçamento não depende do modelo lembrar.**
 Em vez de esperar a IA chamar uma segunda ferramenta, a própria `registrar_transacao` devolve a transação **e** o status do orçamento. O modelo recebe o alerta no resultado e comenta na resposta. Os limites (80% e 100%) são calculados com os valores exatos, não com o percentual arredondado: `399,99 de 500` ainda é OK. Um teste de fronteira achou esse bug.
@@ -270,10 +271,15 @@ Token no `localStorage` é confortável de programar e ruim de defender: qualque
 
 Duas decisões vieram junto. A primeira: quem procura o token olha o header `Authorization` primeiro e o cookie depois, então Swagger, `requests.http` e curl continuam funcionando como antes, e um teste no Swagger com outra conta não é atropelado pelo cookie do site aberto na outra aba. A segunda: mantive o CSRF desligado. Com `SameSite=Strict` o navegador não manda o cookie em nada que venha de outro site, inclusive formulário HTML, que é justamente o vetor que o CORS não cobre. Um token CSRF seria uma segunda defesa para a mesma ameaça, com mais peças para quebrar no webhook da Evolution e no Swagger.
 
-**12. A hora "de hoje" vem de um `Clock`, não do servidor.**
+**12. A memória da Lumi foi para o banco, e o limite mudou de natureza.**
+Com a conversa em RAM, o risco era o heap: como o id da conversa vem do cliente, alguém poderia criar conversas sem parar, e por isso existia um limite de 200 conversas com descarte da mais antiga. No banco esse risco some e aparece outro: guardar conversa de um ano atrás não ajuda ninguém e é dado pessoal parado. Então o critério virou tempo, com uma limpeza diária do que passou de 30 dias.
+
+A tabela é criada pelo Flyway, e não pelo Spring AI, por um motivo concreto: o script dele declara `conversation_id VARCHAR(36)` e a minha chave é `userId:conversa`, que passa disso. Também troquei o `ENUM` do script original por `VARCHAR`, porque `ENUM` só existe no MySQL e o mesmo SQL precisa rodar no H2 dos testes. As duas coisas estão cobertas por teste, inclusive no MySQL de verdade.
+
+**13. A hora "de hoje" vem de um `Clock`, não do servidor.**
 O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília cairia no dia seguinte, e no dia 30 o "resumo do mês" viraria o mês que vem. Existe um único bean `Clock` no fuso `America/Sao_Paulo` (`app.timezone`) e todo `LocalDate.now()` passa por ele. De quebra os testes de data ficaram determinísticos: o `TransactionServiceTest` fixa o relógio em 01:30 UTC e prova que o gasto cai no dia anterior, o de Brasília.
 
-**13. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
+**14. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Strategy* na memória de conversa (o `MessageWindowChatMemory` recebe o repositório pronto, e trocar RAM por banco não mexeu em mais nada); *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
 
 **Outras:** `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o mesmo SQL servir H2 e MySQL; JWT com o suporte nativo do Spring Security (`NimbusJwtEncoder`, HS256) em vez de biblioteca extra; 401 e 403 escritos como `ProblemDetail` por um `AuthenticationEntryPoint` próprio, porque exceções de segurança acontecem antes do `@RestControllerAdvice`; frontend empacotado dentro do jar para ter uma porta só, sem CORS e um container só; token num cookie `HttpOnly` com `SameSite=Strict`, fora do alcance do JavaScript; sem Kafka, porque para um app de gastos pessoais seria complexidade sem necessidade.
 
@@ -291,7 +297,7 @@ O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília c
 | 6 | **Memória de conversa** (`MessageWindowChatMemory`): "e o de ontem?" funciona; chave por usuário; `DELETE /api/assistant/conversation`. | `LumiChat`, `ConversationKey` |
 | 7 | **Orçamento mensal por categoria com alertas** (OK / atenção / estourado) e 4 ferramentas novas para a Lumi. | `BudgetService`, `BudgetTools` |
 | 8 | **Alerta entregue junto do registro do gasto**, sem ida e volta extra ao modelo. | `ExpenseService` |
-| 9 | **Migrations com Flyway** (4 versões, SQL que serve H2 e MySQL) e `ddl-auto=validate`; os testes de repositório rodam sobre as migrations. | `db/migration`, `@JpaTest` |
+| 9 | **Migrations com Flyway** (8 versões, SQL que serve H2 e MySQL) e `ddl-auto=validate`; os testes de repositório rodam sobre as migrations. | `db/migration`, `@JpaTest` |
 | 10 | **Frontend React 19 + Vite + TypeScript**: painel com indicadores e dois gráficos, chat com microfone, upload e arrastar-e-soltar de áudio (aceita as notas de voz do WhatsApp), histórico, tema claro/escuro, notificações, edição inline, navegação por mês, layout de celular com menu inferior. React Query para cache, 10 testes com Vitest. | `frontend/`, `SpaForwardController` |
 | 11 | **Docker em 3 estágios** (Node → Maven → JRE), usuário não-root, `HEALTHCHECK`, `compose` com MySQL persistente e Evolution opcional. | `Dockerfile`, `compose.yml` |
 | 12 | **CI no GitHub Actions**: backend, frontend e imagem Docker, verde sem nenhum segredo. | `.github/workflows/ci.yml` |
@@ -306,7 +312,7 @@ O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília c
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, chat "Você", áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
 | 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. | `Category` |
 | 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
-| 24 | **Memória sob controle**: conversas limitadas (Decorator LRU), threads virtuais com limite de paralelismo, lista da ferramenta com teto, `mem_limit` no compose e JVM que respeita o container. | `BoundedChatMemoryRepository`, `application.properties`, `compose.yml` |
+| 24 | **Memória sob controle**: conversa guardada no banco com limpeza por tempo, threads virtuais com limite de paralelismo, listas paginadas, `mem_limit` no compose e JVM que respeita o container. | `ChatMemoryCleanup`, `application.properties`, `compose.yml` |
 
 ---
 
@@ -432,7 +438,7 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 226 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
+./mvnw test      # 225 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
 ./mvnw verify    # + 4 num MySQL real (Testcontainers, precisa do Docker) + 9 de ponta a ponta com a IA
                  #   (os de IA só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir no ambiente)
 ```
@@ -442,7 +448,8 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 | `TransactionServiceTest`, `BudgetServiceTest`, `ExpenseServiceTest` | Unitário | validações, 404 para dado de outra pessoa, total/percentual, **fronteiras 80%/100% do orçamento**, alerta no registro, **saldo com receitas e saldo negativo**, categoria de receita recusada no orçamento, data certa no fuso de Brasília |
 | `CookieOrBearerTokenResolverTest` | Unitário | header vence o cookie, cookie sozinho autentica, cookie vazio é ignorado, `Secure` só em https, `HttpOnly` e `SameSite=Strict` no cookie emitido |
 | `AuthServiceTest`, `JwtServiceTest` | Unitário | cadastro, e-mail duplicado, credencial inválida → 401, login demo (e recusa com o modo desligado), token com `sub` = id, assinatura com outra chave falha |
-| `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest`, `BoundedChatMemoryRepositoryTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, resposta duplicada pelo modelo limpa, formatos de áudio, TTS desligado, conversa mais antiga descartada ao passar do limite |
+| `AssistantServiceTest`, `LumiChatTest`, `ConversationKeyTest` | Unitário | conversa presa ao usuário, `userId` no `ToolContext`, resposta duplicada pelo modelo limpa, formatos de áudio, TTS desligado |
+| `ChatMemoryPersistenceTest` | `@DataJpaTest` + Flyway | a tabela aceita a chave `uuid:conversa` (maior que o padrão do Spring AI) e a limpeza tira só o que passou da janela |
 | `TransactionToolsTest`, `BudgetToolsTest`, `RecurringToolsTest` | Unitário | ferramentas expostas, **`userId` fora do schema**, `userId` falso do modelo ignorado, erro claro sem contexto |
 | `CsvExporterTest`, `ReportServiceTest` | Unitário | bytes do BOM, separador e aspas no CSV, valor em vírgula, ordem crescente; variação positiva e negativa contra o mês anterior, sem variação quando não havia o que comparar, corte no top 3, contagem de orçamentos em alerta |
 | `SavingsGoalServiceTest` | Unitário com relógio fixo | percentual nas fronteiras, depósito que conclui a meta, guardar mais que o alvo não deixa "faltando" negativo, baixar o valor desfaz a conclusão, meta vencida, quanto por mês até o prazo, nome repetido vira 422 |
@@ -451,10 +458,10 @@ Categorias de gasto: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`
 | `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | chat "Você" aceito e eco da própria resposta ignorado, mensagens para outras pessoas e grupos ignoradas, extrai número (inclusive com LID), vínculo automático da conta demo, áudio em base64 vai para o Whisper, segredo errado → 404 |
 | `TransactionRepositoryTest`, `UserAndBudgetRepositoryTest`, `RecurringTransactionRepositoryTest` | `@DataJpaTest` + Flyway | isolamento por usuário nas queries, agregações, `UNIQUE` de e-mail e de orçamento, **apagar a conta fixa mantém o histórico** |
 | `format.test.ts`, `BudgetBar.test.tsx`, `useChatHistory.test.tsx` (frontend, Vitest) | Componente / hook | intervalo do mês, dinheiro em pt-BR, edição inline do limite, histórico do chat por usuário sem vazar URLs de áudio |
-| `MySqlMigrationsIT` (4) | Testcontainers, MySQL 9.6 real | as 5 migrations rodam no MySQL (não só no H2), agregação por categoria, **busca com filtros nulos** (`:type is null or ...`, que o H2 aceita e o MySQL poderia recusar), `UNIQUE` de e-mail e de orçamento; pulado sem Docker |
+| `MySqlMigrationsIT` (5) | Testcontainers, MySQL 9.6 real | as 8 migrations rodam no MySQL (não só no H2), agregação por categoria, **busca com filtros nulos** (`:type is null or ...`, que o H2 aceita e o MySQL poderia recusar), `UNIQUE` de e-mail e de orçamento; pulado sem Docker |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **226 no backend + 13 no frontend** sem chave; **236** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
+Resultado local: **225 no backend + 13 no frontend** sem chave; **236** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
 
 **Cobertura (JaCoCo).** O `./mvnw verify` gera `target/site/jacoco/index.html` e falha se a cobertura de linhas cair abaixo de 70%. A medição é só onde mora regra de negócio (`service`, `tool`, `security`, `mapper`, `whatsapp`): DTO, entidade e configuração são declarativos e só inflariam o número. Hoje está em **76%**, e a parte menos coberta é o cliente HTTP da Evolution, que precisaria de um servidor falso para valer a pena.
 
@@ -518,7 +525,6 @@ O que é meu de verdade: as escolhas, os testes com a minha voz e o meu WhatsApp
 
 - **Conexão com o banco (Open Finance):** importar os lançamentos da conta e do cartão pela API do banco e deixar a Lumi só classificar e comentar. O `ExpenseService` já é o ponto único de entrada de um gasto, então a importação seria mais uma porta, como o WhatsApp foi.
 - **API oficial do WhatsApp (Meta Cloud API):** outra implementação de `WhatsAppGateway`, sem mexer no resto.
-- **Memória de conversa em banco** (`JdbcChatMemoryRepository`) para sobreviver ao restart e a várias instâncias.
 
 ---
 
