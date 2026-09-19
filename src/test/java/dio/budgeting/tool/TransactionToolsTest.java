@@ -3,6 +3,7 @@ package dio.budgeting.tool;
 import dio.budgeting.dto.request.TransactionRequest;
 import dio.budgeting.dto.response.PageResponse;
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.exception.BusinessException;
 import dio.budgeting.service.ExpenseService;
 import dio.budgeting.service.TransactionService;
@@ -98,18 +99,18 @@ class TransactionToolsTest {
 
     @Test
     void should_askOnlyTheFirstPageLimitedInTheDatabase_when_listing() {
-        when(transactionService.list(ME, Category.GROCERIES, null, null, 0, TransactionTools.MAX_LISTED))
+        when(transactionService.list(ME, null, Category.GROCERIES, null, null, 0, TransactionTools.MAX_LISTED))
                 .thenReturn(new PageResponse<>(java.util.List.of(), 0, TransactionTools.MAX_LISTED, 0, 0));
 
-        var result = tools.listTransactions(Category.GROCERIES, null, "", context(ME));
+        var result = tools.listTransactions(null, Category.GROCERIES, null, "", context(ME));
 
         assertThat(result).isEmpty();
-        verify(transactionService).list(ME, Category.GROCERIES, null, null, 0, TransactionTools.MAX_LISTED);
+        verify(transactionService).list(ME, null, Category.GROCERIES, null, null, 0, TransactionTools.MAX_LISTED);
     }
 
     @Test
     void should_explainError_when_dateIsInvalid() {
-        assertThatThrownBy(() -> tools.listTransactions(null, "ontem", null, context(ME)))
+        assertThatThrownBy(() -> tools.listTransactions(null, null, "ontem", null, context(ME)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("AAAA-MM-DD");
     }

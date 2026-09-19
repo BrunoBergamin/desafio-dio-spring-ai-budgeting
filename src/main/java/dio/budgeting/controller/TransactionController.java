@@ -5,6 +5,7 @@ import dio.budgeting.dto.response.PageResponse;
 import dio.budgeting.dto.response.SpendingSummaryResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.security.CurrentUserProvider;
 import dio.budgeting.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,9 +33,9 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final CurrentUserProvider currentUser;
 
-    @Operation(summary = "Registra um gasto")
+    @Operation(summary = "Registra um lançamento (gasto ou receita, conforme a categoria)")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Gasto registrado"),
+            @ApiResponse(responseCode = "201", description = "Lançamento registrado"),
             @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content)
     })
     @PostMapping
@@ -45,15 +46,16 @@ public class TransactionController {
         return ResponseEntity.created(location).body(created);
     }
 
-    @Operation(summary = "Lista gastos, paginados, com filtros opcionais de categoria e período (mais recentes primeiro)")
+    @Operation(summary = "Lista lançamentos, paginados, com filtros opcionais de tipo, categoria e período")
     @GetMapping
     public PageResponse<TransactionResponse> list(
+            @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) Category category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return transactionService.list(currentUser.requireUserId(), category, start, end, page, size);
+        return transactionService.list(currentUser.requireUserId(), type, category, start, end, page, size);
     }
 
     @Operation(summary = "Resumo de gastos por categoria no período (padrão: mês atual)")

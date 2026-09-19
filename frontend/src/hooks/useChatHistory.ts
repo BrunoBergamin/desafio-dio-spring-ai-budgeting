@@ -14,7 +14,7 @@ const KEY = (conversation: string, userId: string) => `lumi.chat.${userId}.${con
 const welcome = (): ChatMessage => ({
   id: 1,
   role: 'lumi',
-  text: 'Oi! Eu sou a Lumi. Fale, escreva ou envie um áudio (até os do WhatsApp) com um gasto, tipo "gastei 45 reais no mercado", ou pergunte "quanto gastei este mês?".',
+  text: 'Oi! Eu sou a Lumi. Fale, escreva ou envie um áudio (até os do WhatsApp) com um gasto ou uma receita, tipo "gastei 45 reais no mercado" ou "recebi 5200 de salário". Também dá para perguntar "quanto gastei este mês?" e "sobrou quanto?".',
   at: new Date().toISOString(),
 });
 

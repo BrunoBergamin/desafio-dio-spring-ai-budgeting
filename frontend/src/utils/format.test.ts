@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { monthRange, parseMoney, percentDelta, shiftMonth, money, shortDate } from './format';
+import { CATEGORIES, CATEGORY_COLORS, categoriesOf, monthRange, parseMoney, percentDelta, shiftMonth, money, shortDate } from './format';
 
 describe('format', () => {
   it('monta o intervalo do mês respeitando fevereiro e meses de 31 dias', () => {
@@ -29,5 +29,16 @@ describe('format', () => {
     // O Intl separa "R$" do valor com um espaco sem quebra; o \s cobre os dois tipos de espaco
     expect(money(1234.5).replace(/\s/g, ' ')).toBe('R$ 1.234,50');
     expect(shortDate('2026-09-16')).toBe('16/09/2026');
+  });
+
+  it('separa as categorias de gasto das de receita', () => {
+    const income = categoriesOf('INCOME').map((c) => c.value);
+    const expense = categoriesOf('EXPENSE').map((c) => c.value);
+
+    expect(income).toEqual(['SALARY', 'FREELANCE', 'INVESTMENTS', 'OTHER_INCOME']);
+    expect(expense).toContain('GROCERIES');
+    expect(expense).not.toContain('SALARY');
+    // Toda categoria precisa de cor, senao o grafico e as etiquetas ficam sem nada
+    for (const c of CATEGORIES) expect(CATEGORY_COLORS[c.value]).toBeDefined();
   });
 });

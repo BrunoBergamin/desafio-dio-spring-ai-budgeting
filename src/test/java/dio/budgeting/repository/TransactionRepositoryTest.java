@@ -2,6 +2,7 @@ package dio.budgeting.repository;
 
 import dio.budgeting.entity.Category;
 import dio.budgeting.entity.Transaction;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.entity.User;
 import dio.budgeting.support.JpaTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,7 @@ class TransactionRepositoryTest {
 
     @Test
     void should_sumByCategory_onlyForTheUser_when_periodIsGiven() {
-        var totals = repository.sumByCategoryBetween(bruno.getId(), LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
+        var totals = repository.sumByCategoryBetween(bruno.getId(), TransactionType.EXPENSE, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
 
         assertThat(totals).hasSize(2);
         assertThat(totals.getFirst().getCategory()).isEqualTo(Category.GROCERIES);
@@ -54,8 +55,8 @@ class TransactionRepositoryTest {
 
     @Test
     void should_filterByCategoryAndPeriod() {
-        var result = repository.findAllByUserIdAndCategoryAndDateBetween(
-                bruno.getId(), Category.GROCERIES, LocalDate.of(2026, 9, 3), LocalDate.of(2026, 9, 30), NEWEST_FIRST);
+        var result = repository.search(bruno.getId(), null, Category.GROCERIES,
+                LocalDate.of(2026, 9, 3), LocalDate.of(2026, 9, 30), NEWEST_FIRST);
 
         assertThat(result.getContent()).extracting(Transaction::getDescription).containsExactly("Padaria");
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -63,9 +64,9 @@ class TransactionRepositoryTest {
 
     @Test
     void should_paginateNewestFirst_when_pageIsSmallerThanTheHistory() {
-        var firstPage = repository.findAllByUserId(bruno.getId(),
+        var firstPage = repository.search(bruno.getId(), null, null, null, null,
                 PageRequest.of(0, 3, Sort.by(Sort.Order.desc("date"), Sort.Order.desc("createdAt"))));
-        var secondPage = repository.findAllByUserId(bruno.getId(),
+        var secondPage = repository.search(bruno.getId(), null, null, null, null,
                 PageRequest.of(1, 3, Sort.by(Sort.Order.desc("date"), Sort.Order.desc("createdAt"))));
 
         assertThat(firstPage.getTotalElements()).isEqualTo(4);
@@ -84,8 +85,8 @@ class TransactionRepositoryTest {
 
     @Test
     void should_notReturnTransactionsOfAnotherUser() {
-        var all = repository.findAllByUserId(outra.getId(), NEWEST_FIRST).getContent();
-        var brunoTransaction = repository.findAllByUserId(bruno.getId(), NEWEST_FIRST).getContent().getFirst();
+        var all = repository.search(outra.getId(), null, null, null, null, NEWEST_FIRST).getContent();
+        var brunoTransaction = repository.search(bruno.getId(), null, null, null, null, NEWEST_FIRST).getContent().getFirst();
 
         assertThat(all).extracting(Transaction::getDescription).containsExactly("Mercado da outra");
         assertThat(repository.findByIdAndUserId(brunoTransaction.getId(), outra.getId())).isEmpty();

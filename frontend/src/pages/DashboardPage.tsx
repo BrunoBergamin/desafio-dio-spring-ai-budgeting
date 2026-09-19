@@ -18,10 +18,13 @@ export function DashboardPage() {
   const transactions = useTransactions({ start: range.start, end: range.end, size: 500 });
 
   const total = summary.data?.total ?? 0;
+  const income = summary.data?.income ?? 0;
+  const balance = summary.data?.balance ?? 0;
   const delta = before.data ? percentDelta(total, before.data.total) : null;
   const top = summary.data?.categories[0];
   const exceeded = budgets.data?.filter((b) => b.status !== 'OK').length ?? 0;
   const monthTransactions = transactions.data?.content ?? [];
+  const expensesOfMonth = monthTransactions.filter((t) => t.type === 'EXPENSE');
   const recent = monthTransactions.slice(0, 6);
   const isCurrent = month === currentMonth();
 
@@ -40,9 +43,11 @@ export function DashboardPage() {
       </div>
 
       <div className="stats">
+        <Stat label="Recebido no mês" value={money(income)} hint={income === 0 ? 'nenhuma receita registrada' : 'salário, freela e rendimentos'} />
         <Stat label="Gasto no mês" value={money(total)}
               hint={delta === null ? 'sem mês anterior para comparar' : <span className={delta > 0 ? 'delta up' : 'delta down'}>{delta > 0 ? '▲' : '▼'} {Math.abs(delta)}% vs. mês anterior</span>} />
-        <Stat label="Lançamentos" value={String(summary.data?.quantity ?? 0)} hint={`${summary.data?.categories.length ?? 0} categorias`} />
+        <Stat label="Saldo do mês" value={money(balance)} tone={balance < 0 ? 'danger' : 'ok'}
+              hint={balance < 0 ? 'você gastou mais do que entrou' : 'o que sobrou do que entrou'} />
         <Stat label="Maior categoria" value={top ? `${categoryEmoji(top.category)} ${top.categoryLabel}` : '-'} hint={top ? `${money(top.total)} · ${top.percentage}%` : undefined} />
         <Stat label="Orçamentos" value={budgets.data ? `${budgets.data.length - exceeded}/${budgets.data.length} ok` : '-'}
               hint={exceeded ? `${exceeded} em atenção ou estourado` : 'tudo dentro do limite'} tone={exceeded ? 'warning' : 'ok'} />
@@ -55,7 +60,7 @@ export function DashboardPage() {
         </section>
         <section className="card">
           <div className="card-head"><h3>Por dia</h3></div>
-          {transactions.isLoading ? <Skeleton lines={5} height={18} /> : <DailyChart transactions={monthTransactions} month={month} />}
+          {transactions.isLoading ? <Skeleton lines={5} height={18} /> : <DailyChart transactions={expensesOfMonth} month={month} />}
         </section>
       </div>
 
@@ -76,7 +81,9 @@ export function DashboardPage() {
                     <span>{t.description}</span>
                     <span className="muted small">{t.categoryLabel} · {shortDate(t.date)}</span>
                   </span>
-                  <span className="list-amount">{money(t.amount)}</span>
+                  <span className={`list-amount ${t.type === 'INCOME' ? 'income' : ''}`}>
+                    {t.type === 'INCOME' ? '+' : ''}{money(t.amount)}
+                  </span>
                 </li>
               ))}
             </ul>

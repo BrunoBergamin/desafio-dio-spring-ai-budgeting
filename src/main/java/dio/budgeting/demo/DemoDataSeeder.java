@@ -72,28 +72,44 @@ public class DemoDataSeeder implements ApplicationRunner {
             new Sample("Veterinário", "210.00", Category.PETS, 44),
             new Sample("Mercado", "254.30", Category.GROCERIES, 47),
             new Sample("Academia", "99.90", Category.SUBSCRIPTIONS, 50),
-            new Sample("IPVA (parcela)", "230.00", Category.TAXES, 52));
+            new Sample("IPVA (parcela)", "230.00", Category.TAXES, 52),
+            // receitas, para o painel ter saldo e nao so gasto
+            new Sample("Salário", "5200.00", Category.SALARY, 14),
+            new Sample("Projeto freelance", "800.00", Category.FREELANCE, 22),
+            new Sample("Salário", "5200.00", Category.SALARY, 45),
+            new Sample("Rendimento da poupança", "63.40", Category.INVESTMENTS, 46));
 
+    /**
+     * Semeia por bloco, e nao "pula se a conta existe": com o MySQL guardando os dados em volume, uma versao
+     * nova do projeto precisa conseguir acrescentar o que ainda nao existe (receitas, por exemplo) numa
+     * conta demo criada por uma versao anterior.
+     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (userRepository.existsByEmail(properties.email())) {
-            log.info("[demo] conta demo já existe ({}), nada a semear", properties.email());
-            return;
-        }
-        var user = userRepository.save(new User(properties.name(), properties.email(),
-                passwordEncoder.encode(properties.password())));
+        var user = userRepository.findByEmail(properties.email()).orElseGet(() -> {
+            var created = userRepository.save(new User(properties.name(), properties.email(),
+                    passwordEncoder.encode(properties.password())));
+            log.info("[demo] conta demo criada: {} (senha no .env.example)", properties.email());
+            return created;
+        });
         var today = LocalDate.now(clock);
-        for (var sample : SAMPLES) {
-            transactionRepository.save(new Transaction(user, sample.description(),
-                    new BigDecimal(sample.amount()), sample.category(), today.minusDays(sample.daysAgo())));
+
+        if (transactionRepository.findTop5ByUserIdOrderByDateDescCreatedAtDesc(user.getId()).isEmpty()) {
+            for (var sample : SAMPLES) {
+                transactionRepository.save(new Transaction(user, sample.description(),
+                        new BigDecimal(sample.amount()), sample.category(), today.minusDays(sample.daysAgo())));
+            }
+            log.info("[demo] {} lançamentos de exemplo criados", SAMPLES.size());
         }
+
         var month = today.withDayOfMonth(1);
-        budgetRepository.save(new Budget(user, Category.GROCERIES, month, new BigDecimal("700.00")));
-        budgetRepository.save(new Budget(user, Category.RESTAURANT, month, new BigDecimal("300.00")));
-        budgetRepository.save(new Budget(user, Category.SUBSCRIPTIONS, month, new BigDecimal("100.00")));
-        budgetRepository.save(new Budget(user, Category.TRANSPORT, month, new BigDecimal("150.00")));
-        log.info("[demo] conta demo criada: {} com {} gastos e 4 orçamentos (senha no .env.example)",
-                properties.email(), SAMPLES.size());
+        if (budgetRepository.findAllByUserIdAndReferenceMonthOrderByCategory(user.getId(), month).isEmpty()) {
+            budgetRepository.save(new Budget(user, Category.GROCERIES, month, new BigDecimal("700.00")));
+            budgetRepository.save(new Budget(user, Category.RESTAURANT, month, new BigDecimal("300.00")));
+            budgetRepository.save(new Budget(user, Category.SUBSCRIPTIONS, month, new BigDecimal("100.00")));
+            budgetRepository.save(new Budget(user, Category.TRANSPORT, month, new BigDecimal("150.00")));
+            log.info("[demo] 4 orçamentos de exemplo criados para {}", month);
+        }
     }
 }
