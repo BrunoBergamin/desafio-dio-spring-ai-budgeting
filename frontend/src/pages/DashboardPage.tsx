@@ -1,26 +1,26 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useBudgets, useSummary, useTransactions } from '../hooks/useFinance';
+import { useBudgets, useMonthlyReport, useSummary, useTransactions } from '../hooks/useFinance';
 import { CategoryChart } from '../components/CategoryChart';
 import { DailyChart } from '../components/DailyChart';
 import { BudgetBar } from '../components/BudgetBar';
 import { EmptyState, Skeleton, Stat } from '../ui/primitives';
-import { categoryEmoji, currentMonth, money, monthLabel, monthRange, percentDelta, shiftMonth, shortDate } from '../utils/format';
+import { categoryEmoji, currentMonth, money, monthLabel, monthRange, shiftMonth, shortDate } from '../utils/format';
 
 export function DashboardPage() {
   const [month, setMonth] = useState(currentMonth());
   const range = monthRange(month);
-  const previous = monthRange(shiftMonth(month, -1));
   const summary = useSummary(range.start, range.end);
-  const before = useSummary(previous.start, previous.end);
+  // O relatório já traz saldo, variação, maiores gastos e metas numa chamada só
+  const report = useMonthlyReport(month);
   const budgets = useBudgets(month);
   // O grafico diario precisa do mes inteiro: uma pagina grande (o teto da API e 500)
   const transactions = useTransactions({ start: range.start, end: range.end, size: 500 });
 
-  const total = summary.data?.total ?? 0;
-  const income = summary.data?.income ?? 0;
-  const balance = summary.data?.balance ?? 0;
-  const delta = before.data ? percentDelta(total, before.data.total) : null;
+  const total = report.data?.expenses ?? summary.data?.total ?? 0;
+  const income = report.data?.income ?? 0;
+  const balance = report.data?.balance ?? 0;
+  const delta = report.data?.expensesDeltaPercentage ?? null;
   const top = summary.data?.categories[0];
   const exceeded = budgets.data?.filter((b) => b.status !== 'OK').length ?? 0;
   const monthTransactions = transactions.data?.content ?? [];
@@ -101,6 +101,62 @@ export function DashboardPage() {
           )}
         </section>
       </div>
+
+      <section className="card">
+        <div className="card-head">
+          <h3>Relatório de {monthLabel(month)}</h3>
+          <Link className="btn ghost small" to="/conversa">pedir para a Lumi narrar</Link>
+        </div>
+        {report.isLoading ? <Skeleton lines={6} /> : !report.data ? null : (
+          <div className="grid-two-even">
+            <div className="stack">
+              <h4 className="muted small">Maiores gastos</h4>
+              {report.data.topExpenses.length === 0 ? (
+                <p className="muted small">Nenhum gasto neste mês.</p>
+              ) : (
+                <ul className="list">
+                  {report.data.topExpenses.map((t) => (
+                    <li key={t.id} className="list-row">
+                      <span className="list-icon" aria-hidden>{categoryEmoji(t.category)}</span>
+                      <span className="list-main">
+                        <span>{t.description}</span>
+                        <span className="muted small">{t.categoryLabel} · {shortDate(t.date)}</span>
+                      </span>
+                      <span className="list-amount">{money(t.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="stack">
+              <h4 className="muted small">Metas de economia</h4>
+              {report.data.goals.length === 0 ? (
+                <p className="muted small">
+                  Nenhuma meta ainda. <Link to="/metas">Criar a primeira</Link>.
+                </p>
+              ) : (
+                <ul className="list">
+                  {report.data.goals.map((g) => (
+                    <li key={g.id} className="list-row">
+                      <span className="list-icon" aria-hidden>🏦</span>
+                      <span className="list-main">
+                        <span>{g.name}</span>
+                        <span className="muted small">{g.statusLabel} · {g.percentage.toFixed(0)}%</span>
+                      </span>
+                      <span className="list-amount">{money(g.savedAmount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {report.data.budgetsInAlert > 0 && (
+                <p className="muted small">
+                  ⚠ {report.data.budgetsInAlert} de {report.data.budgets.length} orçamentos em atenção ou estourados.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { api } from './client';
 import type {
   AssistantResponse, AuthResponse, BudgetStatusResponse, Category, ExpenseCategory, PageResponse,
-  GoalRequest, RecurringRequest, RecurringResponse, SavingsGoalResponse, SpendingSummary,
+  GoalRequest, MonthlyReport, RecurringRequest, RecurringResponse, SavingsGoalResponse, SpendingSummary,
   TransactionRequest, TransactionResponse,
   TransactionType, UserResponse, WhatsAppConnection,
 } from './types';
@@ -42,6 +42,10 @@ export const transactionsApi = {
   update: (id: string, body: TransactionRequest) =>
     api.put<TransactionResponse>(`/transactions/${id}`, body).then((r) => r.data),
   remove: (id: string) => api.delete(`/transactions/${id}`),
+
+  /** Baixa o CSV do periodo. Vem como blob para o navegador salvar como arquivo. */
+  exportCsv: (params?: TransactionFilters) =>
+    api.get<Blob>('/transactions/export.csv', { params, responseType: 'blob' }).then((r) => r.data),
 };
 
 export const recurringApi = {
@@ -71,6 +75,11 @@ export const goalsApi = {
   deposit: (id: string, amount: number) =>
     api.post<SavingsGoalResponse>(`/goals/${id}/deposits`, { amount }).then((r) => r.data),
   remove: (id: string) => api.delete(`/goals/${id}`),
+};
+
+export const reportsApi = {
+  monthly: (month?: string) =>
+    api.get<MonthlyReport>('/reports/monthly', { params: month ? { month } : undefined }).then((r) => r.data),
 };
 
 export const assistantApi = {

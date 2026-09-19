@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import type { Category, TransactionResponse, TransactionType } from '../api/types';
 import { errorMessage } from '../api/client';
+import { transactionsApi } from '../api/endpoints';
 import { useCreateTransaction, useDeleteTransaction, useTransactions, useUpdateTransaction } from '../hooks/useFinance';
 import { Confirm, EmptyState, Skeleton } from '../ui/primitives';
 import { useToast } from '../ui/Toast';
@@ -70,6 +71,22 @@ export function TransactionsPage() {
     setEditing(t);
     setForm({ description: t.description, amount: String(t.amount).replace('.', ','), category: t.category, date: t.date, type: t.type });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  /** Baixa o CSV com os mesmos filtros da tela. O navegador salva o arquivo a partir do blob. */
+  const exportCsv = async () => {
+    try {
+      const blob = await transactionsApi.exportCsv({ type: kind || undefined, category: filter || undefined, ...range });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = allTime ? 'lancamentos.csv' : `lancamentos-${month}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      notify('success', 'CSV baixado. Abre direto no Excel.');
+    } catch (err) {
+      notify('error', errorMessage(err));
+    }
   };
 
   const confirmRemove = async () => {
@@ -153,6 +170,7 @@ export function TransactionsPage() {
             <option value="date">mais recentes</option>
             <option value="amount">maior valor</option>
           </select>
+          <button type="button" className="btn ghost small" onClick={exportCsv}>⬇ CSV</button>
         </div>
 
         {query.isLoading ? <Skeleton lines={6} /> : items.length === 0 ? (
