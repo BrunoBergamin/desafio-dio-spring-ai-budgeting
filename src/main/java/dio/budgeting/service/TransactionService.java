@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +39,7 @@ public class TransactionService {
     private final UserRepository userRepository;
     private final TransactionMapper transactionMapper;
     private final Validator validator;
+    private final Clock clock;
 
     @Transactional
     public TransactionResponse create(UUID userId, TransactionRequest request) {
@@ -144,7 +146,7 @@ public class TransactionService {
 
     /** Sem datas: mês atual. Só início: até hoje. Só fim: desde o primeiro dia do mês do fim. */
     private Period resolvePeriod(LocalDate start, LocalDate end) {
-        var today = LocalDate.now();
+        var today = LocalDate.now(clock);
         var resolvedEnd = end != null ? end : today;
         var resolvedStart = start != null ? start : resolvedEnd.withDayOfMonth(1);
         if (resolvedStart.isAfter(resolvedEnd)) {

@@ -29,4 +29,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \
   CMD curl -fsS http://localhost:8080/actuator/health || exit 1
 # 75% da memoria do container para o heap; se estourar, o processo cai e o Docker sobe outro (nao fica zumbi)
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]
+# user.timezone: o container roda em UTC; sem isso a validacao de "data no futuro" e os logs ficariam 3h adiantados
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "-Duser.timezone=America/Sao_Paulo", "-jar", "app.jar"]

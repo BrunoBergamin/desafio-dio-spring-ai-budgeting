@@ -1,10 +1,10 @@
-# Sobe a aplicacao inteira (API + frontend) com um comando:
+# Sobe a aplicacao inteira (API + frontend + MySQL) com um comando:
 #   cp .env.example .env   (preencha a chave da IA e o segredo do JWT)
 #   docker compose up --build
 #
-# Banco padrao: H2 em memoria. Para MySQL:  docker compose --profile mysql up --build
-# (com SPRING_PROFILES_ACTIVE=groq,mysql no .env)
-# WhatsApp pela Evolution API:  docker compose --profile whatsapp up --build  (SPRING_PROFILES_ACTIVE=groq,whatsapp)
+# Banco padrao: MySQL, com os dados guardados no volume transaction_data (sobrevivem ao restart).
+# Para rodar so o banco e a API fora do Docker:  docker compose up database   (MySQL em localhost:3307)
+# WhatsApp pela Evolution API:  docker compose --profile whatsapp up --build  (SPRING_PROFILES_ACTIVE=groq,mysql,whatsapp)
 services:
   app:
     build: .
@@ -14,18 +14,16 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
-    # Espera o MySQL ficar saudavel quando o profile mysql esta ativo; sem o profile, e ignorado (required: false)
+    # So sobe depois que o MySQL responde ao ping (healthcheck abaixo)
     depends_on:
       database:
         condition: service_healthy
-        required: false
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-groq}
+      TZ: America/Sao_Paulo
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-groq,mysql}
       APP_JWT_SECRET: ${APP_JWT_SECRET:?defina APP_JWT_SECRET no .env (minimo 32 caracteres)}
-      # Dentro do container nao existe Docker para o Spring subir o MySQL sozinho
-      SPRING_DOCKER_COMPOSE_ENABLED: "false"
       # Dentro da rede do compose o host do MySQL e "database" na porta 3306 (a 3307 so existe no host)
       DB_URL: jdbc:mysql://database:3306/transaction?useSSL=false&allowPublicKeyRetrieval=true
       # WhatsApp (perfil whatsapp): a Evolution fala com a app pela rede interna, sem ngrok
@@ -40,11 +38,16 @@ services:
       retries: 10
       start_period: 45s
 
-  # Opcional: MySQL no lugar do H2. Ative com --profile mysql
+  # Banco de dados. Fora do compose (ex.: ./mvnw spring-boot:run) ele atende em localhost:3307
   database:
     image: mysql:9.6
-    profiles: ["mysql"]
+    container_name: lumi-mysql
+    # O MySQL 9 sozinho passa de 400 MB com o performance_schema ligado; desligado fica em ~200 MB
+    command: --performance-schema=OFF
+    mem_limit: 512m
+    restart: unless-stopped
     environment:
+      TZ: America/Sao_Paulo
       MYSQL_DATABASE: transaction
       MYSQL_ROOT_PASSWORD: root
       MYSQL_USER: app

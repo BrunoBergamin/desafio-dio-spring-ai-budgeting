@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -27,18 +28,21 @@ public class LumiChat {
     private final ChatClient chatClient;
     private final ChatMemory chatMemory;
     private final Resource systemPrompt;
+    private final Clock clock;
 
     public LumiChat(ChatClient chatClient,
                     ChatMemory chatMemory,
-                    @Value("classpath:prompts/system-message.st") Resource systemPrompt) {
+                    @Value("classpath:prompts/system-message.st") Resource systemPrompt,
+                    Clock clock) {
         this.chatClient = chatClient;
         this.chatMemory = chatMemory;
         this.systemPrompt = systemPrompt;
+        this.clock = clock;
     }
 
     public String answer(java.util.UUID userId, String conversationKey, String message) {
         var answer = dropRepeatedOpening(chatClient.prompt()
-                .system(system -> system.text(systemPrompt).param("today", LocalDate.now().format(TODAY_FORMAT)))
+                .system(system -> system.text(systemPrompt).param("today", LocalDate.now(clock).format(TODAY_FORMAT)))
                 .toolContext(Map.of(ToolUser.USER_ID, userId))
                 .advisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, conversationKey))
                 .user(message)

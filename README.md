@@ -21,7 +21,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-9-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-0000BB?style=flat-square&logo=h2database&logoColor=white)](https://www.h2database.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://springdoc.org/)
-[![Testes](https://img.shields.io/badge/testes-119%20unit%C3%A1rios%20%2B%209%20com%20IA%20real-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
+[![Testes](https://img.shields.io/badge/testes-121%20unit%C3%A1rios%20%2B%209%20com%20IA%20real%20%2B%203%20em%20MySQL-success?style=flat-square&logo=junit5&logoColor=white)](#-testes-automatizados)
 [![DIO](https://img.shields.io/badge/DIO-Desafio%20de%20Projeto-30A3DC?style=flat-square)](https://www.dio.me/)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -69,7 +69,7 @@ Eu não sou expert em Spring nem em IA. Estou aprendendo, e este projeto foi fei
 
 ## 🐳 Rodando com um comando (Docker)
 
-Precisa só do [Docker](https://www.docker.com/products/docker-desktop/). Não precisa de Java, Maven nem Node: tudo é compilado dentro da imagem.
+Precisa só do [Docker](https://www.docker.com/products/docker-desktop/). Não precisa de Java, Maven nem Node: tudo é compilado dentro da imagem. Sobem dois containers: a aplicação e um MySQL, com os dados guardados no volume `transaction_data`, então o que você registra continua lá depois de reiniciar.
 
 ```bash
 git clone https://github.com/BrunoBergamin/desafio-dio-spring-ai-budgeting.git
@@ -83,7 +83,8 @@ Abra **http://localhost:8080** e fale com a Lumi. **Não precisa criar conta nem
 **Modo demonstração (padrão).** A conta `demo@lumi.local` (senha fictícia `lumi-demo-1234`, só existe no seu computador) é criada na primeira subida com 30 lançamentos e 4 limites, e o frontend pega o token em `POST /api/auth/demo`. Quem for testar abre a URL e já vê o painel cheio. Para usar de verdade, com cadastro e login normais, coloque `APP_DEMO_ENABLED=false` no `.env`: o JWT, o multiusuário e o isolamento por usuário continuam funcionando, só ficam escondidos na demonstração.
 
 - A chave da Groq é gratuita: crie em https://console.groq.com/keys (sem cartão).
-- Quer MySQL em vez do H2 em memória? `SPRING_PROFILES_ACTIVE=groq,mysql` no `.env` e `docker compose --profile mysql up --build`.
+- Quer começar do zero? `docker compose down -v` apaga o volume do banco e a conta demo é recriada na próxima subida.
+- A hora "de hoje" é a de Brasília (`app.timezone`), e não a do container: um gasto registrado às 23h cai no dia certo.
 - A imagem final roda como usuário sem privilégio (`lumi`), tem `HEALTHCHECK` e pesa cerca de 800 MB (JRE 25 + Ubuntu).
 
 ---
@@ -245,7 +246,10 @@ Em vez de esperar a IA chamar uma segunda ferramenta, a própria `registrar_tran
 **4. Memória da JVM com teto.**
 Tudo que fica em RAM tem limite: conversas (200), mensagens por conversa (10), ids de mensagens enviadas ao WhatsApp (500), áudio de upload (10 MB), lista que a ferramenta devolve ao modelo (50 lançamentos; para totais existe `resumo_de_gastos`, que soma no banco). O webhook do WhatsApp roda em threads virtuais (Java 21+) com no máximo 8 em paralelo; o pool do banco tem 5 conexões; no Docker o container tem `mem_limit: 640m`, a JVM lê esse teto (`MaxRAMPercentage=75`) e cai e sobe de novo se estourar (`ExitOnOutOfMemoryError`). No navegador, os áudios da conversa são liberados com `URL.revokeObjectURL` ao sair da página. Medido: cerca de 400 MB em uso.
 
-**5. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
+**5. A hora "de hoje" vem de um `Clock`, não do servidor.**
+O container roda em UTC. Sem cuidado, um gasto registrado às 22h de Brasília cairia no dia seguinte, e no dia 30 o "resumo do mês" viraria o mês que vem. Existe um único bean `Clock` no fuso `America/Sao_Paulo` (`app.timezone`) e todo `LocalDate.now()` passa por ele. De quebra os testes de data ficaram determinísticos: o `TransactionServiceTest` fixa o relógio em 01:30 UTC e prova que o gasto cai no dia anterior, o de Brasília.
+
+**6. Padrões que aparecem no código**, sem inventar camada nova: *Ports and Adapters* no WhatsApp (`WhatsAppGateway` é a porta, `EvolutionApiGateway` o adaptador); *Decorator* no `BoundedChatMemoryRepository`; *Facade* no `AssistantService`, que esconde transcrição, chat e voz atrás de três métodos; *Command* no Tool Calling (cada `@Tool` é um comando que o modelo escolhe e o Spring AI executa); *Repository* e *DTO + Mapper* nas bordas; text-to-speech opcional com `ObjectProvider` + `Optional`, sem `if` de perfil espalhado; configuração por perfil (Groq, OpenAI, MySQL, WhatsApp) em vez de `if` no código.
 
 **Outras:** `VARCHAR(36)` e `TIMESTAMP(6)` nas migrations para o mesmo SQL servir H2 e MySQL; JWT com o suporte nativo do Spring Security (`NimbusJwtEncoder`, HS256) em vez de biblioteca extra; 401 e 403 escritos como `ProblemDetail` por um `AuthenticationEntryPoint` próprio, porque exceções de segurança acontecem antes do `@RestControllerAdvice`; frontend empacotado dentro do jar para ter uma porta só, sem CORS e um container só; token no `localStorage`, sabendo do risco de XSS (cookie `HttpOnly` seria o próximo passo); sem Kafka, porque para um app de gastos pessoais seria complexidade sem necessidade.
 
@@ -265,7 +269,7 @@ Tudo que fica em RAM tem limite: conversas (200), mensagens por conversa (10), i
 | 8 | **Alerta entregue junto do registro do gasto**, sem ida e volta extra ao modelo. | `ExpenseService` |
 | 9 | **Migrations com Flyway** (4 versões, SQL que serve H2 e MySQL) e `ddl-auto=validate`; os testes de repositório rodam sobre as migrations. | `db/migration`, `@JpaTest` |
 | 10 | **Frontend React 19 + Vite + TypeScript**: painel com indicadores e dois gráficos, chat com microfone, upload e arrastar-e-soltar de áudio (aceita as notas de voz do WhatsApp), histórico, tema claro/escuro, notificações, edição inline, navegação por mês, layout de celular com menu inferior. React Query para cache, 10 testes com Vitest. | `frontend/`, `SpaForwardController` |
-| 11 | **Docker em 3 estágios** (Node → Maven → JRE), usuário não-root, `HEALTHCHECK`, `compose` com MySQL e Evolution opcionais. | `Dockerfile`, `compose.yml` |
+| 11 | **Docker em 3 estágios** (Node → Maven → JRE), usuário não-root, `HEALTHCHECK`, `compose` com MySQL persistente e Evolution opcional. | `Dockerfile`, `compose.yml` |
 | 12 | **CI no GitHub Actions**: backend, frontend e imagem Docker, verde sem nenhum segredo. | `.github/workflows/ci.yml` |
 | 13 | **Actuator** (`health`, `info`, `metrics`) e prefixo `/api` em todos os endpoints. | `WebMvcConfig`, `application.properties` |
 | 14 | **Perfil gratuito (`groq`)**: mesma aplicação, só configuração; text-to-speech opcional (503 explicado). | `application-groq.properties` |
@@ -274,7 +278,7 @@ Tudo que fica em RAM tem limite: conversas (200), mensagens por conversa (10), i
 | 17 | **Áudio em formato inesperado vira 422 explicado** (o Gravador do Windows salva AAC cru como `.m4a`). Descobri testando com a minha voz. | `AssistantService` |
 | 18 | **Erros padronizados** com `ProblemDetail` em toda a API, inclusive 401/403 da camada de segurança. | `GlobalExceptionHandler`, `ProblemDetailResponses` |
 | 19 | **System prompt** com data de hoje, proibição de inventar valores, memória e orçamento; persona "Lumi". | `prompts/system-message.st` |
-| 20 | **119 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, ponta a ponta com IA). | `src/test` |
+| 20 | **133 testes** (unitários, `@WebMvcTest` com a segurança real, `@DataJpaTest` com Flyway, MySQL real com Testcontainers, ponta a ponta com IA). | `src/test` |
 | 21 | **WhatsApp via Evolution API** (perfil `whatsapp`): webhook protegido por segredo, chat "Você", áudio e texto, resposta em segundo plano, provedor atrás de interface. | `whatsapp/`, `WhatsAppController` |
 | 22 | **16 categorias** (mercado, restaurante, saúde, moradia, transporte, carro, assinaturas, roupas, beleza, lazer, educação, pets, viagem, presentes, impostos, outros) com um guia no schema da ferramenta para o modelo classificar melhor. | `Category` |
 | 23 | **Modo demonstração**: conta pronta com dois meses de gastos e orçamentos, login automático sem senha, número do WhatsApp vinculado na primeira mensagem. `APP_DEMO_ENABLED=false` volta ao cadastro normal. | `demo/`, `AuthContext.tsx` |
@@ -288,7 +292,7 @@ Tudo que fica em RAM tem limite: conversas (200), mensagens por conversa (10), i
 - **Spring AI 2.0**: `ChatClient`, Tool Calling (`@Tool` + `ToolContext`), `MessageChatMemoryAdvisor`, `TranscriptionModel`, `TextToSpeechModel`
   - **Groq** (perfil `groq`, gratuito): `openai/gpt-oss-120b` + `whisper-large-v3-turbo`
   - **OpenAI** (perfil padrão): `gpt-4o-mini` + `whisper-1` + `gpt-4o-mini-tts`
-- **Evolution API** (WhatsApp, open source) · **Flyway 12** · **H2** (padrão) e **MySQL 9** · **Lombok** · **springdoc-openapi**
+- **Evolution API** (WhatsApp, open source) · **Flyway 12** · **MySQL 9** (padrão no Docker) e **H2** (testes e modo rápido) · **Lombok** · **springdoc-openapi**
 - **React 19**, **Vite 8**, **TypeScript**, `react-router`, `@tanstack/react-query`, `axios`, `recharts`, CSS puro com variáveis (tema claro/escuro)
 - **Vitest + Testing Library** no frontend · **JUnit 5, Mockito, MockMvc, Spring Security Test, AssertJ** no backend
 - **Maven** (wrapper) · **Docker** · **GitHub Actions**
@@ -301,7 +305,14 @@ Pré-requisitos: JDK 25 e (só para o frontend em modo dev) Node 22.
 
 ```bash
 cp .env.example .env            # GROQ_API_KEY + APP_JWT_SECRET
-./mvnw spring-boot:run -Dspring-boot.run.profiles=groq     # API em :8080 (Windows: .\mvnw.cmd ...)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=groq     # API em :8080 com H2 em memória (Windows: .\mvnw.cmd ...)
+```
+
+Com MySQL (dados persistentes), suba só o banco pelo Docker e aponte a API para ele:
+
+```bash
+docker compose up database                                        # MySQL em localhost:3307
+./mvnw spring-boot:run -Dspring-boot.run.profiles=groq,mysql
 ```
 
 Frontend com hot reload (o Vite faz proxy de `/api` para a API, sem CORS):
@@ -319,7 +330,7 @@ Para servir o React pela própria API (como no Docker): `npm run build`, copie `
 | Health | http://localhost:8080/actuator/health |
 | Console H2 | http://localhost:8080/h2-console (`jdbc:h2:mem:budgeting`, usuário `sa`) |
 
-Perfil OpenAI (com resposta em MP3): defina `OPENAI_API_KEY` e rode sem `-Dspring-boot.run.profiles`. Perfil MySQL local: `-Dspring-boot.run.profiles=groq,mysql` (o Spring sobe o `compose.yml` do banco sozinho).
+Perfil OpenAI (com resposta em MP3): defina `OPENAI_API_KEY` e rode sem `-Dspring-boot.run.profiles`.
 
 ---
 
@@ -389,8 +400,9 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 ## ✅ Testes automatizados
 
 ```bash
-./mvnw test      # 119 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
-./mvnw verify    # + 9 de ponta a ponta com a IA (só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir no ambiente)
+./mvnw test      # 121 testes sem custo (unitários, WebMvc com a segurança real, JPA sobre as migrations)
+./mvnw verify    # + 3 num MySQL real (Testcontainers, precisa do Docker) + 9 de ponta a ponta com a IA
+                 #   (os de IA só rodam se GROQ_API_KEY ou OPENAI_API_KEY existir no ambiente)
 ```
 
 | Classe | Tipo | O que garante |
@@ -403,9 +415,10 @@ Categorias: `GROCERIES`, `RESTAURANT`, `PHARMA`, `HOUSING`, `TRANSPORT`, `AUTO`,
 | `WhatsAppServiceTest`, `WhatsAppControllerTest` | Unitário + `@WebMvcTest` | chat "Você" aceito e eco da própria resposta ignorado, mensagens para outras pessoas e grupos ignoradas, extrai número (inclusive com LID), vínculo automático da conta demo, áudio em base64 vai para o Whisper, segredo errado → 404 |
 | `TransactionRepositoryTest`, `UserAndBudgetRepositoryTest` | `@DataJpaTest` + Flyway | isolamento por usuário nas queries, agregações, `UNIQUE` de e-mail e de orçamento |
 | `format.test.ts`, `BudgetBar.test.tsx`, `useChatHistory.test.tsx` (frontend, Vitest) | Componente / hook | intervalo do mês, dinheiro em pt-BR, edição inline do limite, histórico do chat por usuário sem vazar URLs de áudio |
+| `MySqlMigrationsIT` (3) | Testcontainers, MySQL 9.6 real | as 4 migrations rodam no MySQL (não só no H2), agregação por categoria em JPQL, `UNIQUE` de e-mail e de orçamento; pulado sem Docker |
 | `AssistantFlowGroqIT` (6) · `AssistantFlowIT` (3) | Ponta a ponta com IA real | grava na categoria certa, transcreve áudio, **usuário B não vê o total de A**, lembra a mensagem anterior, avisa do orçamento, MP3 |
 
-Resultado local: **119 no backend + 10 no frontend** sem chave; **128** com a chave da Groq (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro.
+Resultado local: **121 no backend + 10 no frontend** sem chave; **130** com a chave da Groq e o Docker ligado (`BUILD SUCCESS` no `./mvnw verify`). No CI os testes de IA são pulados por condição, não por erro; o de MySQL roda, porque o runner do GitHub tem Docker.
 
 ---
 

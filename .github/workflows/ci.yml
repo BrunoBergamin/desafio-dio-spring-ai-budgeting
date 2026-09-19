@@ -22,7 +22,8 @@ jobs:
           java-version: '25'
           cache: maven
       - run: chmod +x mvnw
-      # Sem GROQ_API_KEY / OPENAI_API_KEY os testes *IT se desligam sozinhos: o build e verde e gratuito
+      # Sem GROQ_API_KEY / OPENAI_API_KEY os testes com IA se desligam sozinhos: o build e verde e gratuito.
+      # O MySqlMigrationsIT sobe um MySQL pelo Testcontainers (o runner ubuntu-latest ja tem Docker).
       - run: ./mvnw -B verify
       - uses: actions/upload-artifact@v4
         if: always()
