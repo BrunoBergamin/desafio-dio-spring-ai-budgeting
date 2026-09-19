@@ -51,6 +51,21 @@ Content-Type: application/json
   "date": "2099-01-01"
 }
 
+### Registrar uma receita (a categoria define que e entrada de dinheiro)
+POST {{base}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "description": "Salario de setembro",
+  "amount": 5200.00,
+  "category": "SALARY"
+}
+
+### Listar so as receitas
+GET {{base}}/transactions?type=INCOME
+Authorization: Bearer {{token}}
+
 ### Listar (filtros opcionais; resposta paginada em "content")
 GET {{base}}/transactions?category=GROCERIES&start=2026-09-01&end=2026-09-30
 Authorization: Bearer {{token}}
@@ -59,7 +74,7 @@ Authorization: Bearer {{token}}
 GET {{base}}/transactions?page=1&size=10
 Authorization: Bearer {{token}}
 
-### Resumo do mês atual
+### Resumo do mes atual (gastos por categoria, total recebido e saldo)
 GET {{base}}/transactions/summary
 Authorization: Bearer {{token}}
 

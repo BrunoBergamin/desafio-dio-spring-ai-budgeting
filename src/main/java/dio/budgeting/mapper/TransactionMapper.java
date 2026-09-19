@@ -32,6 +32,7 @@ public class TransactionMapper {
                 transaction.getAmount(),
                 transaction.getCategory(),
                 transaction.getCategory().getLabel(),
+                transaction.getType(),
                 transaction.getDate());
     }
 }

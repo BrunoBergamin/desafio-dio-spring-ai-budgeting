@@ -80,6 +80,14 @@ class BudgetServiceTest {
     }
 
     @Test
+    void should_rejectBudget_when_categoryIsAnIncomeOne() {
+        assertThatThrownBy(() -> service.create(USER_ID, new BudgetRequest(Category.SALARY, new BigDecimal("5000"), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("categoria de receita");
+        verifyNoInteractions(budgetRepository);
+    }
+
+    @Test
     void should_rejectBudget_when_monthFormatIsInvalid() {
         assertThatThrownBy(() -> service.create(USER_ID, new BudgetRequest(Category.GROCERIES, BigDecimal.TEN, "2026-13")))
                 .isInstanceOf(BusinessException.class)

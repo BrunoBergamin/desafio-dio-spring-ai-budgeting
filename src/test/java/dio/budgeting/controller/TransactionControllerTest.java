@@ -3,6 +3,7 @@ package dio.budgeting.controller;
 import dio.budgeting.dto.response.PageResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.exception.BusinessException;
 import dio.budgeting.exception.ResourceNotFoundException;
 import dio.budgeting.security.AppUserDetailsService;
@@ -56,7 +57,7 @@ class TransactionControllerTest {
     void should_return201_when_transactionIsCreated() throws Exception {
         var id = UUID.randomUUID();
         when(transactionService.create(eq(UUID.fromString(USER_ID)), any())).thenReturn(new TransactionResponse(
-                id, "Mercado", new BigDecimal("80.50"), Category.GROCERIES, "Mercado", LocalDate.of(2026, 9, 15)));
+                id, "Mercado", new BigDecimal("80.50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, LocalDate.of(2026, 9, 15)));
 
         mockMvc.perform(post("/api/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -72,8 +73,8 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = USER_ID)
     void should_returnAPage_when_listingWithPageAndSize() throws Exception {
-        var item = new TransactionResponse(UUID.randomUUID(), "Padaria", new BigDecimal("18.50"), Category.GROCERIES, "Mercado", LocalDate.of(2026, 9, 15));
-        when(transactionService.list(eq(UUID.fromString(USER_ID)), isNull(), isNull(), isNull(), eq(2), eq(10)))
+        var item = new TransactionResponse(UUID.randomUUID(), "Padaria", new BigDecimal("18.50"), Category.GROCERIES, "Mercado", TransactionType.EXPENSE, LocalDate.of(2026, 9, 15));
+        when(transactionService.list(eq(UUID.fromString(USER_ID)), isNull(), isNull(), isNull(), isNull(), eq(2), eq(10)))
                 .thenReturn(new PageResponse<>(java.util.List.of(item), 2, 10, 25, 3));
 
         mockMvc.perform(get("/api/transactions").param("page", "2").param("size", "10"))
@@ -87,7 +88,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = USER_ID)
     void should_useFirstPageOf50_when_pagingParamsAreOmitted() throws Exception {
-        when(transactionService.list(any(), any(), any(), any(), eq(0), eq(50)))
+        when(transactionService.list(any(), any(), any(), any(), any(), eq(0), eq(50)))
                 .thenReturn(new PageResponse<>(java.util.List.of(), 0, 50, 0, 0));
 
         mockMvc.perform(get("/api/transactions"))

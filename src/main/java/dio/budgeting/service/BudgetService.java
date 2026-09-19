@@ -5,6 +5,7 @@ import dio.budgeting.dto.response.BudgetStatusResponse;
 import dio.budgeting.entity.Budget;
 import dio.budgeting.entity.BudgetStatus;
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.exception.BusinessException;
 import dio.budgeting.exception.ResourceNotFoundException;
 import dio.budgeting.repository.BudgetRepository;
@@ -187,6 +188,11 @@ public class BudgetService {
         if (!violations.isEmpty()) {
             throw new BusinessException(violations.stream()
                     .map(ConstraintViolation::getMessage).sorted().collect(Collectors.joining("; ")));
+        }
+        // Orcamento e teto de gasto: nao faz sentido limitar quanto se pode receber
+        if (request.category() != null && request.category().getType() == TransactionType.INCOME) {
+            throw new BusinessException("%s é uma categoria de receita; orçamento serve para categorias de gasto"
+                    .formatted(request.category().getLabel()));
         }
     }
 

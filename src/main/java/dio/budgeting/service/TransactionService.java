@@ -7,6 +7,7 @@ import dio.budgeting.dto.response.SpendingSummaryResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
 import dio.budgeting.entity.Transaction;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.exception.BusinessException;
 import dio.budgeting.exception.ResourceNotFoundException;
 import dio.budgeting.mapper.TransactionMapper;
@@ -16,7 +17,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -66,26 +66,23 @@ public class TransactionService {
     }
 
     /**
-     * Lista paginada, dos mais recentes para os mais antigos. Sem datas, traz todo o historico (paginado);
-     * com uma das datas, aplica as mesmas regras de periodo do resumo.
+     * Lista paginada, dos mais recentes para os mais antigos. Filtros nulos nao filtram. Sem datas, traz
+     * todo o historico (paginado); com uma das datas, aplica as mesmas regras de periodo do resumo.
      */
     @Transactional(readOnly = true)
-    public PageResponse<TransactionResponse> list(UUID userId, Category category, LocalDate start, LocalDate end,
-                                                  int page, int size) {
+    public PageResponse<TransactionResponse> list(UUID userId, TransactionType type, Category category,
+                                                  LocalDate start, LocalDate end, int page, int size) {
         var pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, MAX_PAGE_SIZE), NEWEST_FIRST);
-        Page<Transaction> transactions;
+        LocalDate from = null;
+        LocalDate to = null;
         if (start != null || end != null) {
             var period = resolvePeriod(start, end);
-            transactions = category == null
-                    ? transactionRepository.findAllByUserIdAndDateBetween(userId, period.start(), period.end(), pageable)
-                    : transactionRepository.findAllByUserIdAndCategoryAndDateBetween(
-                            userId, category, period.start(), period.end(), pageable);
-        } else {
-            transactions = category == null
-                    ? transactionRepository.findAllByUserId(userId, pageable)
-                    : transactionRepository.findAllByUserIdAndCategory(userId, category, pageable);
+            from = period.start();
+            to = period.end();
         }
-        return PageResponse.from(transactions, transactionMapper::toResponse);
+        return PageResponse.from(
+                transactionRepository.search(userId, type, category, from, to, pageable),
+                transactionMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +97,7 @@ public class TransactionService {
         var transaction = getOrThrow(userId, id);
         transaction.setDescription(request.description());
         transaction.setAmount(request.amount());
-        transaction.setCategory(request.category());
+        transaction.changeCategory(request.category());
         if (request.date() != null) {
             transaction.setDate(request.date());
         }
@@ -114,13 +111,17 @@ public class TransactionService {
         log.info("Transação removida: id={} user={}", id, userId);
     }
 
+    /** Gastos por categoria, total recebido e saldo do periodo. */
     @Transactional(readOnly = true)
     public SpendingSummaryResponse summary(UUID userId, LocalDate start, LocalDate end) {
         var period = resolvePeriod(start, end);
-        var totals = transactionRepository.sumByCategoryBetween(userId, period.start(), period.end());
+        var totals = transactionRepository.sumByCategoryBetween(
+                userId, TransactionType.EXPENSE, period.start(), period.end());
 
-        var overall = totals.stream().map(t -> t.getTotal()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        var expenses = totals.stream().map(t -> t.getTotal()).reduce(BigDecimal.ZERO, BigDecimal::add);
         var quantity = totals.stream().mapToLong(t -> t.getQuantity()).sum();
+        var income = transactionRepository.sumAmountByType(
+                userId, TransactionType.INCOME, period.start(), period.end());
 
         var categories = totals.stream()
                 .map(t -> new CategorySummaryResponse(
@@ -128,10 +129,11 @@ public class TransactionService {
                         t.getCategory().getLabel(),
                         t.getTotal(),
                         t.getQuantity(),
-                        percentage(t.getTotal(), overall)))
+                        percentage(t.getTotal(), expenses)))
                 .toList();
 
-        return new SpendingSummaryResponse(period.start(), period.end(), overall, quantity, categories);
+        return new SpendingSummaryResponse(period.start(), period.end(), expenses, income,
+                income.subtract(expenses), quantity, categories);
     }
 
     /** Total gasto pelo usuario em uma categoria dentro do periodo (usado pelo orcamento). */

@@ -1,7 +1,14 @@
-export type Category =
+export type ExpenseCategory =
   | 'GROCERIES' | 'RESTAURANT' | 'PHARMA' | 'HOUSING' | 'TRANSPORT' | 'AUTO'
   | 'SUBSCRIPTIONS' | 'CLOTHING' | 'PERSONAL_CARE' | 'LEISURE' | 'EDUCATION'
   | 'PETS' | 'TRAVEL' | 'GIFTS' | 'TAXES' | 'OTHER';
+
+export type IncomeCategory = 'SALARY' | 'FREELANCE' | 'INVESTMENTS' | 'OTHER_INCOME';
+
+export type Category = ExpenseCategory | IncomeCategory;
+
+/** A categoria ja diz se o lancamento e gasto ou receita; o back-end devolve isto pronto. */
+export type TransactionType = 'EXPENSE' | 'INCOME';
 
 export type BudgetStatus = 'OK' | 'WARNING' | 'EXCEEDED';
 
@@ -32,6 +39,7 @@ export interface TransactionResponse {
   amount: number;
   category: Category;
   categoryLabel: string;
+  type: TransactionType;
   date: string;
 }
 
@@ -62,7 +70,12 @@ export interface CategorySummary {
 export interface SpendingSummary {
   start: string;
   end: string;
+  /** Total de gastos no periodo */
   total: number;
+  /** Total recebido no periodo */
+  income: number;
+  /** income - total; negativo quando gastou mais do que entrou */
+  balance: number;
   quantity: number;
   categories: CategorySummary[];
 }

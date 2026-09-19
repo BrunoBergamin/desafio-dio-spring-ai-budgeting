@@ -2,6 +2,7 @@ package dio.budgeting.service;
 
 import dio.budgeting.dto.request.TransactionRequest;
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.entity.Transaction;
 import dio.budgeting.entity.User;
 import dio.budgeting.exception.BusinessException;
@@ -36,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 import org.mockito.ArgumentCaptor;
@@ -149,13 +151,13 @@ class TransactionServiceTest {
     @Test
     void should_clampPageSizeAndSortNewestFirst_when_listing() {
         var transaction = new Transaction(owner, "Mercado", BigDecimal.TEN, Category.GROCERIES, TODAY);
-        when(transactionRepository.findAllByUserId(eq(USER_ID), any(Pageable.class)))
-                .thenAnswer(inv -> new PageImpl<>(List.of(transaction), inv.getArgument(1, Pageable.class), 1));
+        when(transactionRepository.search(eq(USER_ID), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(transaction), inv.getArgument(5, Pageable.class), 1));
 
-        var page = service.list(USER_ID, null, null, null, -3, 9_999);
+        var page = service.list(USER_ID, null, null, null, null, -3, 9_999);
 
         var captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(transactionRepository).findAllByUserId(eq(USER_ID), captor.capture());
+        verify(transactionRepository).search(eq(USER_ID), isNull(), isNull(), isNull(), isNull(), captor.capture());
         assertThat(captor.getValue().getPageNumber()).isZero();
         assertThat(captor.getValue().getPageSize()).isEqualTo(TransactionService.MAX_PAGE_SIZE);
         assertThat(captor.getValue().getSort().getOrderFor("date").getDirection()).isEqualTo(Sort.Direction.DESC);
@@ -166,10 +168,10 @@ class TransactionServiceTest {
 
     @Test
     void should_useThePeriodQuery_when_listingWithDates() {
-        when(transactionRepository.findAllByUserIdAndDateBetween(eq(USER_ID), eq(LocalDate.of(2026, 9, 1)), eq(TODAY), any(Pageable.class)))
+        when(transactionRepository.search(eq(USER_ID), isNull(), isNull(), eq(LocalDate.of(2026, 9, 1)), eq(TODAY), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
 
-        var page = service.list(USER_ID, null, LocalDate.of(2026, 9, 1), null, 0, 50);
+        var page = service.list(USER_ID, null, null, LocalDate.of(2026, 9, 1), null, 0, 50);
 
         assertThat(page.content()).isEmpty();
         assertThat(page.size()).isEqualTo(50);
@@ -185,9 +187,10 @@ class TransactionServiceTest {
     void should_calculateTotalsAndPercentages_when_summaryIsRequested() {
         var start = LocalDate.of(2026, 9, 1);
         var end = LocalDate.of(2026, 9, 30);
-        when(transactionRepository.sumByCategoryBetween(USER_ID, start, end)).thenReturn(List.of(
+        when(transactionRepository.sumByCategoryBetween(USER_ID, TransactionType.EXPENSE, start, end)).thenReturn(List.of(
                 total(Category.GROCERIES, "150.00", 2),
                 total(Category.PHARMA, "50.00", 1)));
+        when(transactionRepository.sumAmountByType(USER_ID, TransactionType.INCOME, start, end)).thenReturn(BigDecimal.ZERO);
 
         var summary = service.summary(USER_ID, start, end);
 
@@ -199,8 +202,64 @@ class TransactionServiceTest {
     }
 
     @Test
+    void should_reportIncomeAndBalance_when_thereAreEarningsInThePeriod() {
+        var start = LocalDate.of(2026, 9, 1);
+        var end = LocalDate.of(2026, 9, 30);
+        when(transactionRepository.sumByCategoryBetween(USER_ID, TransactionType.EXPENSE, start, end))
+                .thenReturn(List.of(total(Category.GROCERIES, "1200.00", 8)));
+        when(transactionRepository.sumAmountByType(USER_ID, TransactionType.INCOME, start, end))
+                .thenReturn(new BigDecimal("5200.00"));
+
+        var summary = service.summary(USER_ID, start, end);
+
+        assertThat(summary.total()).isEqualByComparingTo("1200.00");
+        assertThat(summary.income()).isEqualByComparingTo("5200.00");
+        assertThat(summary.balance()).isEqualByComparingTo("4000.00");
+        // A pizza mostra so gasto: o salario nao entra como categoria
+        assertThat(summary.categories()).extracting(c -> c.category()).containsExactly(Category.GROCERIES);
+    }
+
+    @Test
+    void should_reportNegativeBalance_when_spendingIsHigherThanEarning() {
+        var start = LocalDate.of(2026, 9, 1);
+        var end = LocalDate.of(2026, 9, 30);
+        when(transactionRepository.sumByCategoryBetween(USER_ID, TransactionType.EXPENSE, start, end))
+                .thenReturn(List.of(total(Category.TRAVEL, "900.00", 2)));
+        when(transactionRepository.sumAmountByType(USER_ID, TransactionType.INCOME, start, end))
+                .thenReturn(new BigDecimal("300.00"));
+
+        assertThat(service.summary(USER_ID, start, end).balance()).isEqualByComparingTo("-600.00");
+    }
+
+    @Test
+    void should_saveAsIncome_when_categoryIsAnEarningOne() {
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(owner);
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var response = service.create(USER_ID, new TransactionRequest("Salário", new BigDecimal("5200"), Category.SALARY, null));
+
+        assertThat(response.type()).isEqualTo(TransactionType.INCOME);
+        assertThat(response.categoryLabel()).isEqualTo("Salário");
+        verify(transactionRepository).save(argThat(t -> t.getType() == TransactionType.INCOME));
+    }
+
+    @Test
+    void should_changeTypeTogetherWithCategory_when_editingATransaction() {
+        var id = UUID.randomUUID();
+        var transaction = new Transaction(owner, "Reembolso", BigDecimal.TEN, Category.OTHER, TODAY);
+        when(transactionRepository.findByIdAndUserId(id, USER_ID)).thenReturn(Optional.of(transaction));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var response = service.update(USER_ID, id, new TransactionRequest("Reembolso", BigDecimal.TEN, Category.OTHER_INCOME, TODAY));
+
+        assertThat(response.type()).isEqualTo(TransactionType.INCOME);
+        assertThat(transaction.getType()).isEqualTo(TransactionType.INCOME);
+    }
+
+    @Test
     void should_useCurrentMonthInBrazilTime_when_summaryHasNoDates() {
-        when(transactionRepository.sumByCategoryBetween(USER_ID, LocalDate.of(2026, 9, 1), TODAY)).thenReturn(List.of());
+        when(transactionRepository.sumByCategoryBetween(USER_ID, TransactionType.EXPENSE, LocalDate.of(2026, 9, 1), TODAY)).thenReturn(List.of());
+        when(transactionRepository.sumAmountByType(USER_ID, TransactionType.INCOME, LocalDate.of(2026, 9, 1), TODAY)).thenReturn(BigDecimal.ZERO);
 
         var summary = service.summary(USER_ID, null, null);
 

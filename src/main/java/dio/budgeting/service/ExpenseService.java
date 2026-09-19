@@ -1,15 +1,18 @@
 package dio.budgeting.service;
 
 import dio.budgeting.dto.request.TransactionRequest;
+import dio.budgeting.dto.response.BudgetStatusResponse;
 import dio.budgeting.dto.response.TransactionRegisteredResponse;
+import dio.budgeting.entity.TransactionType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Registra um gasto e ja devolve a situacao do orcamento da categoria.
+ * Registra um lancamento e, quando e gasto, ja devolve a situacao do orcamento da categoria.
  * Orquestra os dois services sem acoplar um ao outro; usado pelo REST e pela ferramenta da Lumi.
  */
 @Service
@@ -22,7 +25,10 @@ public class ExpenseService {
     @Transactional
     public TransactionRegisteredResponse register(UUID userId, TransactionRequest request) {
         var transaction = transactionService.create(userId, request);
-        var budget = budgetService.checkAfterExpense(userId, transaction.category(), transaction.date());
+        // Receita nao consome orcamento: so gasto tem limite para estourar
+        var budget = transaction.type() == TransactionType.EXPENSE
+                ? budgetService.checkAfterExpense(userId, transaction.category(), transaction.date())
+                : Optional.<BudgetStatusResponse>empty();
         return new TransactionRegisteredResponse(transaction, budget.orElse(null));
     }
 }

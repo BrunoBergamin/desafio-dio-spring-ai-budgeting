@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { budgetsApi, transactionsApi, type TransactionFilters } from '../api/endpoints';
-import type { Category, TransactionRequest } from '../api/types';
+import type { ExpenseCategory, TransactionRequest } from '../api/types';
 import { invalidateFinancial, keys } from '../lib/queryClient';
 
 /** Hooks de dados: cada tela declara o que precisa; o React Query cuida de cache, loading e refetch. */
@@ -42,7 +42,7 @@ export function useDeleteTransaction() {
 
 export function useCreateBudget() {
   return useMutation({
-    mutationFn: ({ category, monthlyLimit, month }: { category: Category; monthlyLimit: number; month?: string }) =>
+    mutationFn: ({ category, monthlyLimit, month }: { category: ExpenseCategory; monthlyLimit: number; month?: string }) =>
       budgetsApi.create(category, monthlyLimit, month),
     onSuccess: invalidateFinancial,
   });

@@ -1,10 +1,11 @@
 import { api } from './client';
 import type {
-  AssistantResponse, AuthResponse, BudgetStatusResponse, Category, PageResponse,
-  SpendingSummary, TransactionRequest, TransactionResponse, UserResponse, WhatsAppConnection,
+  AssistantResponse, AuthResponse, BudgetStatusResponse, Category, ExpenseCategory, PageResponse,
+  SpendingSummary, TransactionRequest, TransactionResponse, TransactionType, UserResponse, WhatsAppConnection,
 } from './types';
 
 export interface TransactionFilters {
+  type?: TransactionType;
   category?: Category;
   start?: string;
   end?: string;
@@ -46,7 +47,7 @@ export const budgetsApi = {
     api.get<BudgetStatusResponse[]>('/budgets', { params: month ? { month } : undefined }).then((r) => r.data),
   alerts: (month?: string) =>
     api.get<BudgetStatusResponse[]>('/budgets/alerts', { params: month ? { month } : undefined }).then((r) => r.data),
-  create: (category: Category, monthlyLimit: number, month?: string) =>
+  create: (category: ExpenseCategory, monthlyLimit: number, month?: string) =>
     api.post<BudgetStatusResponse>('/budgets', { category, monthlyLimit, month }).then((r) => r.data),
   update: (id: string, monthlyLimit: number) =>
     api.put<BudgetStatusResponse>(`/budgets/${id}`, { monthlyLimit }).then((r) => r.data),

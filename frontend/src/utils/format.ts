@@ -1,4 +1,4 @@
-import type { Category } from '../api/types';
+import type { Category, ExpenseCategory, IncomeCategory, TransactionType } from '../api/types';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -41,7 +41,7 @@ export const timeNow = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-d
 export const percentDelta = (current: number, previous: number) =>
   previous === 0 ? null : Math.round(((current - previous) / previous) * 100);
 
-export const CATEGORIES: { value: Category; label: string; emoji: string }[] = [
+export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; emoji: string }[] = [
   { value: 'GROCERIES', label: 'Mercado', emoji: '🛒' },
   { value: 'RESTAURANT', label: 'Restaurantes e delivery', emoji: '🍕' },
   { value: 'PHARMA', label: 'Farmácia e saúde', emoji: '💊' },
@@ -59,6 +59,22 @@ export const CATEGORIES: { value: Category; label: string; emoji: string }[] = [
   { value: 'TAXES', label: 'Impostos e taxas', emoji: '🏛️' },
   { value: 'OTHER', label: 'Outros', emoji: '🧾' },
 ];
+
+export const INCOME_CATEGORIES: { value: IncomeCategory; label: string; emoji: string }[] = [
+  { value: 'SALARY', label: 'Salário', emoji: '💰' },
+  { value: 'FREELANCE', label: 'Freelance e bicos', emoji: '🧑‍💻' },
+  { value: 'INVESTMENTS', label: 'Rendimentos e investimentos', emoji: '📈' },
+  { value: 'OTHER_INCOME', label: 'Outras receitas', emoji: '💵' },
+];
+
+export const CATEGORIES: { value: Category; label: string; emoji: string }[] = [
+  ...EXPENSE_CATEGORIES,
+  ...INCOME_CATEGORIES,
+];
+
+/** Categorias de gasto ou de receita, para o select acompanhar o tipo escolhido no formulario. */
+export const categoriesOf = (type: TransactionType) =>
+  type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
 export const categoryEmoji = (category: Category) =>
   CATEGORIES.find((c) => c.value === category)?.emoji ?? '🧾';
@@ -81,6 +97,10 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   GIFTS: '#f87171',
   TAXES: '#9ca3af',
   OTHER: '#94a3b8',
+  SALARY: '#22c55e',
+  FREELANCE: '#4ade80',
+  INVESTMENTS: '#16a34a',
+  OTHER_INCOME: '#86efac',
 };
 
 /** Aceita o que o Whisper aceita, inclusive os .ogg/.opus das notas de voz do WhatsApp. */

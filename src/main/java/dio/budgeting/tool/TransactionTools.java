@@ -5,6 +5,7 @@ import dio.budgeting.dto.response.SpendingSummaryResponse;
 import dio.budgeting.dto.response.TransactionRegisteredResponse;
 import dio.budgeting.dto.response.TransactionResponse;
 import dio.budgeting.entity.Category;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.exception.BusinessException;
 import dio.budgeting.service.ExpenseService;
 import dio.budgeting.service.TransactionService;
@@ -39,12 +40,13 @@ public class TransactionTools {
     private final ExpenseService expenseService;
 
     @Tool(name = "registrar_transacao",
-            description = "Registra um novo gasto financeiro. Devolve a transação e, se houver orçamento para a "
-                    + "categoria, um alerta de quanto do limite do mês já foi usado")
+            description = "Registra um gasto ou uma receita (salário, freela, rendimento). A categoria define qual "
+                    + "dos dois é. Devolve o lançamento e, se for gasto e houver orçamento para a categoria, "
+                    + "um alerta de quanto do limite do mês já foi usado")
     public TransactionRegisteredResponse registerTransaction(
-            @ToolParam(description = "Descrição curta do gasto, ex.: 'Compras no mercado'") String description,
-            @ToolParam(description = "Valor do gasto em reais, ex.: 80.50") BigDecimal amount,
-            @ToolParam(description = "Categoria do gasto. Guia: " + Category.GUIDE) Category category,
+            @ToolParam(description = "Descrição curta, ex.: 'Compras no mercado' ou 'Salário de setembro'") String description,
+            @ToolParam(description = "Valor em reais, sempre positivo, ex.: 80.50") BigDecimal amount,
+            @ToolParam(description = "Categoria, que também diz se é gasto ou receita. Guia: " + Category.GUIDE) Category category,
             @ToolParam(description = "Data do gasto no formato AAAA-MM-DD. Omita se for hoje", required = false) String date,
             ToolContext toolContext) {
         var userId = ToolUser.require(toolContext);
@@ -54,17 +56,18 @@ public class TransactionTools {
     }
 
     @Tool(name = "listar_transacoes",
-            description = "Lista gastos, com filtros opcionais de categoria e período. Devolve no máximo "
+            description = "Lista lançamentos, com filtros opcionais de tipo, categoria e período. Devolve no máximo "
                     + MAX_LISTED + " lançamentos, dos mais recentes para os mais antigos; para totais use resumo_de_gastos")
     public List<TransactionResponse> listTransactions(
+            @ToolParam(description = "EXPENSE para ver só gastos, INCOME só receitas; omita para os dois", required = false) TransactionType type,
             @ToolParam(description = "Categoria para filtrar", required = false) Category category,
             @ToolParam(description = "Data inicial AAAA-MM-DD", required = false) String start,
             @ToolParam(description = "Data final AAAA-MM-DD", required = false) String end,
             ToolContext toolContext) {
         var userId = ToolUser.require(toolContext);
-        log.info("[tool] listar_transacoes user={} category={} start={} end={}", userId, category, start, end);
+        log.info("[tool] listar_transacoes user={} type={} category={} start={} end={}", userId, type, category, start, end);
         // Primeira pagina, ja limitada no banco: o modelo nunca recebe mais do que MAX_LISTED itens
-        return transactionService.list(userId, category, parseDate(start), parseDate(end), 0, MAX_LISTED).content();
+        return transactionService.list(userId, type, category, parseDate(start), parseDate(end), 0, MAX_LISTED).content();
     }
 
     @Tool(name = "ultimas_transacoes", description = "Retorna as 5 transações mais recentes")
@@ -75,8 +78,8 @@ public class TransactionTools {
     }
 
     @Tool(name = "resumo_de_gastos",
-            description = "Calcula o total gasto em um período, agrupado por categoria, com percentual de cada uma. "
-                    + "Sem datas, considera o mês atual")
+            description = "Total gasto no período agrupado por categoria, com o percentual de cada uma, mais o total "
+                    + "recebido (income) e o saldo (balance). Sem datas, considera o mês atual")
     public SpendingSummaryResponse spendingSummary(
             @ToolParam(description = "Data inicial AAAA-MM-DD", required = false) String start,
             @ToolParam(description = "Data final AAAA-MM-DD", required = false) String end,

@@ -33,9 +33,17 @@ public class Transaction {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    /** Sem setter: categoria e tipo andam juntos e mudam por {@link #changeCategory(Category)}. */
+    @Setter(AccessLevel.NONE)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Category category;
+
+    /** Gasto ou receita, derivado da categoria. */
+    @Setter(AccessLevel.NONE)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private TransactionType type;
 
     @Column(name = "transaction_date", nullable = false)
     private LocalDate date;
@@ -50,12 +58,20 @@ public class Transaction {
 
     private Instant updatedAt;
 
+    /** O tipo vem da categoria: RESTAURANT e gasto, SALARY e receita. */
     public Transaction(User user, String description, BigDecimal amount, Category category, LocalDate date) {
         this.user = user;
         this.description = description;
         this.amount = amount;
         this.category = category;
+        this.type = category.getType();
         this.date = date;
+    }
+
+    /** Mantem o tipo em dia quando a categoria muda numa edicao. */
+    public void changeCategory(Category category) {
+        this.category = category;
+        this.type = category.getType();
     }
 
     @PrePersist

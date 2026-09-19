@@ -1,16 +1,16 @@
 import { useState, type FormEvent } from 'react';
-import type { BudgetStatusResponse, Category } from '../api/types';
+import type { BudgetStatusResponse, ExpenseCategory } from '../api/types';
 import { errorMessage } from '../api/client';
 import { useBudgets, useCreateBudget, useDeleteBudget, useUpdateBudget } from '../hooks/useFinance';
 import { BudgetBar } from '../components/BudgetBar';
 import { Confirm, EmptyState, Skeleton } from '../ui/primitives';
 import { useToast } from '../ui/Toast';
-import { CATEGORIES, currentMonth, money, monthLabel, parseMoney, shiftMonth } from '../utils/format';
+import { EXPENSE_CATEGORIES as CATEGORIES, currentMonth, money, monthLabel, parseMoney, shiftMonth } from '../utils/format';
 
 export function BudgetsPage() {
   const { notify } = useToast();
   const [month, setMonth] = useState(currentMonth());
-  const [category, setCategory] = useState<Category>('GROCERIES');
+  const [category, setCategory] = useState<ExpenseCategory>('GROCERIES');
   const [limit, setLimit] = useState('');
   const [removing, setRemoving] = useState<BudgetStatusResponse | null>(null);
   const budgets = useBudgets(month);
@@ -63,7 +63,7 @@ export function BudgetsPage() {
         <form className="form" onSubmit={submit}>
           <label>
             Categoria
-            <select value={category} onChange={(e) => setCategory(e.target.value as Category)}>
+            <select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
               {CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value} disabled={used.has(c.value)}>
                   {c.emoji} {c.label}{used.has(c.value) ? ' (já definido)' : ''}

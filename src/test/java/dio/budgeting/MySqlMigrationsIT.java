@@ -3,6 +3,7 @@ package dio.budgeting;
 import dio.budgeting.entity.Budget;
 import dio.budgeting.entity.Category;
 import dio.budgeting.entity.Transaction;
+import dio.budgeting.entity.TransactionType;
 import dio.budgeting.entity.User;
 import dio.budgeting.repository.BudgetRepository;
 import dio.budgeting.repository.TransactionRepository;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Container;
@@ -56,8 +59,8 @@ class MySqlMigrationsIT {
         var info = flyway.info();
 
         assertThat(info.pending()).isEmpty();
-        assertThat(info.applied()).hasSizeGreaterThanOrEqualTo(4);
-        assertThat(info.current().getVersion().getVersion()).isEqualTo("4");
+        assertThat(info.applied()).hasSizeGreaterThanOrEqualTo(5);
+        assertThat(info.current().getVersion().getVersion()).isEqualTo("5");
     }
 
     @Test
@@ -67,7 +70,7 @@ class MySqlMigrationsIT {
         transactionRepository.save(new Transaction(user, "Padaria", new BigDecimal("19.50"), Category.GROCERIES, LocalDate.of(2026, 9, 12)));
         transactionRepository.save(new Transaction(user, "Remedio", new BigDecimal("42.90"), Category.PHARMA, LocalDate.of(2026, 9, 12)));
 
-        var totals = transactionRepository.sumByCategoryBetween(user.getId(), LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
+        var totals = transactionRepository.sumByCategoryBetween(user.getId(), TransactionType.EXPENSE, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
         var groceries = transactionRepository.sumAmountByCategory(user.getId(), Category.GROCERIES, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
 
         assertThat(totals).hasSize(2);
@@ -75,6 +78,29 @@ class MySqlMigrationsIT {
         assertThat(totals.getFirst().getTotal()).isEqualByComparingTo("100.00");
         assertThat(totals.getFirst().getQuantity()).isEqualTo(2);
         assertThat(groceries).isEqualByComparingTo("100.00");
+    }
+
+    /**
+     * A busca usa "(:type is null or t.type = :type)" para cada filtro. Parametro nulo com enum e o tipo de
+     * coisa que o H2 aceita e o MySQL pode recusar por nao saber o tipo do null, entao vale testar no banco real.
+     */
+    @Test
+    void should_acceptNullFilters_when_searchingOnMySql() {
+        var user = userRepository.save(new User("Bruno", "bruno@email.com", "hash"));
+        transactionRepository.save(new Transaction(user, "Mercado", new BigDecimal("80.50"), Category.GROCERIES, LocalDate.of(2026, 9, 10)));
+        transactionRepository.save(new Transaction(user, "Salario", new BigDecimal("5200.00"), Category.SALARY, LocalDate.of(2026, 9, 5)));
+        var page = PageRequest.of(0, 10, Sort.by(Sort.Order.desc("date")));
+
+        var tudo = transactionRepository.search(user.getId(), null, null, null, null, page);
+        var soReceita = transactionRepository.search(user.getId(), TransactionType.INCOME, null, null, null, page);
+        var soMercadoEmSetembro = transactionRepository.search(user.getId(), null, Category.GROCERIES,
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), page);
+
+        assertThat(tudo.getTotalElements()).isEqualTo(2);
+        assertThat(soReceita.getContent()).extracting(Transaction::getDescription).containsExactly("Salario");
+        assertThat(soMercadoEmSetembro.getContent()).extracting(Transaction::getDescription).containsExactly("Mercado");
+        assertThat(transactionRepository.sumAmountByType(user.getId(), TransactionType.INCOME,
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30))).isEqualByComparingTo("5200.00");
     }
 
     @Test

@@ -20,7 +20,8 @@ public record TransactionRequest(
         @Digits(integer = 6, fraction = 2, message = "o valor deve ter no máximo 2 casas decimais")
         BigDecimal amount,
 
-        @Schema(example = "GROCERIES")
+        @Schema(example = "GROCERIES", description = "A categoria já define se é gasto ou receita "
+                + "(SALARY, FREELANCE, INVESTMENTS e OTHER_INCOME são receitas).")
         @NotNull(message = "a categoria é obrigatória")
         Category category,
 
