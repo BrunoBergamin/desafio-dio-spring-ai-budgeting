@@ -21,7 +21,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +40,9 @@ class BudgetServiceTest {
     private static final ValidatorFactory FACTORY = Validation.buildDefaultValidatorFactory();
     private static final UUID USER_ID = UUID.randomUUID();
     private static final LocalDate SEPTEMBER = LocalDate.of(2026, 9, 1);
+    /** 30/09 as 23h em Brasilia: em UTC ja e 1/10. O "mes atual" tem que continuar setembro. */
+    private static final Clock END_OF_SEPTEMBER =
+            Clock.fixed(Instant.parse("2026-10-01T02:00:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @Mock BudgetRepository budgetRepository;
     @Mock TransactionRepository transactionRepository;
@@ -48,7 +54,16 @@ class BudgetServiceTest {
     @BeforeEach
     void setUp() {
         service = new BudgetService(budgetRepository, transactionRepository, userRepository,
-                FACTORY.getValidator(), new BigDecimal("80"));
+                FACTORY.getValidator(), new BigDecimal("80"), END_OF_SEPTEMBER);
+    }
+
+    @Test
+    void should_useBrazilMonth_when_monthIsOmittedAndUtcIsAlreadyOnTheNextMonth() {
+        when(budgetRepository.findAllByUserIdAndReferenceMonthOrderByCategory(USER_ID, SEPTEMBER)).thenReturn(java.util.List.of());
+
+        assertThat(service.list(USER_ID, null)).isEmpty();
+
+        verify(budgetRepository).findAllByUserIdAndReferenceMonthOrderByCategory(USER_ID, SEPTEMBER);
     }
 
     @AfterAll

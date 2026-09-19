@@ -35,7 +35,8 @@ class LumiChatTest {
     @Test
     @SuppressWarnings("unchecked")
     void should_passAuthenticatedUserInToolContext_when_answering() {
-        var lumi = new LumiChat(chatClient, chatMemory, new ByteArrayResource("Hoje é {today}.".getBytes()));
+        var lumi = new LumiChat(chatClient, chatMemory, new ByteArrayResource("Hoje é {today}.".getBytes()),
+                java.time.Clock.systemDefaultZone());
         when(chatClient.prompt().system(any(java.util.function.Consumer.class)).toolContext(anyMap())
                 .advisors(any(java.util.function.Consumer.class)).user(anyString()).call().content())
                 .thenReturn("Registrei.");
@@ -73,7 +74,8 @@ class LumiChatTest {
 
     @Test
     void should_clearOnlyThatConversation_when_forgetting() {
-        var lumi = new LumiChat(chatClient, chatMemory, new ByteArrayResource("x".getBytes()));
+        var lumi = new LumiChat(chatClient, chatMemory, new ByteArrayResource("x".getBytes()),
+                java.time.Clock.systemDefaultZone());
 
         lumi.forget(USER + ":principal");
 

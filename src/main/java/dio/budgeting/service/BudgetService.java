@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
@@ -37,17 +38,20 @@ public class BudgetService {
     private final UserRepository userRepository;
     private final Validator validator;
     private final BigDecimal warningThreshold;
+    private final Clock clock;
 
     public BudgetService(BudgetRepository budgetRepository,
                          TransactionRepository transactionRepository,
                          UserRepository userRepository,
                          Validator validator,
-                         @Value("${app.budget.warning-threshold:80}") BigDecimal warningThreshold) {
+                         @Value("${app.budget.warning-threshold:80}") BigDecimal warningThreshold,
+                         Clock clock) {
         this.budgetRepository = budgetRepository;
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.validator = validator;
         this.warningThreshold = warningThreshold;
+        this.clock = clock;
     }
 
     /** Cria um orcamento novo; se ja existir um para a categoria no mes, recusa (REST). */
@@ -159,10 +163,10 @@ public class BudgetService {
         return BudgetStatus.OK;
     }
 
-    /** "AAAA-MM" -> dia 1 do mes; vazio -> mes atual. */
-    static LocalDate resolveMonth(String month) {
+    /** "AAAA-MM" -> dia 1 do mes; vazio -> mes atual (no fuso do Clock). */
+    LocalDate resolveMonth(String month) {
         if (month == null || month.isBlank()) {
-            return LocalDate.now().withDayOfMonth(1);
+            return LocalDate.now(clock).withDayOfMonth(1);
         }
         try {
             return YearMonth.parse(month.trim()).atDay(1);

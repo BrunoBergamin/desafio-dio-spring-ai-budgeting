@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -35,6 +36,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Clock clock;
 
     private record Sample(String description, String amount, Category category, int daysAgo) {
     }
@@ -81,7 +83,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
         var user = userRepository.save(new User(properties.name(), properties.email(),
                 passwordEncoder.encode(properties.password())));
-        var today = LocalDate.now();
+        var today = LocalDate.now(clock);
         for (var sample : SAMPLES) {
             transactionRepository.save(new Transaction(user, sample.description(),
                     new BigDecimal(sample.amount()), sample.category(), today.minusDays(sample.daysAgo())));

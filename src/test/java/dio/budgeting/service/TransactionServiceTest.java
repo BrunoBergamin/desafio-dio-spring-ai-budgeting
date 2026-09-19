@@ -21,7 +21,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +40,14 @@ class TransactionServiceTest {
     private static final ValidatorFactory FACTORY = Validation.buildDefaultValidatorFactory();
     private static final UUID USER_ID = UUID.randomUUID();
 
+    /**
+     * 01:30 UTC do dia 19 = 22:30 do dia 18 em Brasilia. Se algum ponto do codigo usar o fuso do
+     * servidor (UTC no container) em vez do Clock, a data "de hoje" vira 19 e o teste acusa.
+     */
+    private static final Clock BRAZIL_LATE_NIGHT =
+            Clock.fixed(Instant.parse("2026-09-19T01:30:00Z"), ZoneId.of("America/Sao_Paulo"));
+    private static final LocalDate TODAY = LocalDate.of(2026, 9, 18);
+
     @Mock
     TransactionRepository transactionRepository;
 
@@ -49,7 +60,8 @@ class TransactionServiceTest {
     @BeforeEach
     void setUp() {
         Validator validator = FACTORY.getValidator();
-        service = new TransactionService(transactionRepository, userRepository, new TransactionMapper(), validator);
+        service = new TransactionService(transactionRepository, userRepository,
+                new TransactionMapper(BRAZIL_LATE_NIGHT), validator, BRAZIL_LATE_NIGHT);
     }
 
     @AfterAll
@@ -66,8 +78,17 @@ class TransactionServiceTest {
 
         assertThat(response.amount()).isEqualByComparingTo("80.50");
         assertThat(response.categoryLabel()).isEqualTo("Mercado");
-        assertThat(response.date()).isEqualTo(LocalDate.now());
         verify(transactionRepository).save(argThat(t -> t.getUser() == owner));
+    }
+
+    @Test
+    void should_useBrazilDate_when_dateIsOmittedAndServerIsAlreadyOnTheNextDayInUtc() {
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(owner);
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var response = service.create(USER_ID, new TransactionRequest("Pizza", new BigDecimal("72"), Category.RESTAURANT, null));
+
+        assertThat(response.date()).isEqualTo(TODAY);
     }
 
     @Test
@@ -82,6 +103,7 @@ class TransactionServiceTest {
 
     @Test
     void should_rejectTransaction_when_dateIsInTheFuture() {
+        // @PastOrPresent do Bean Validation usa o relogio real da JVM, entao aqui o "amanha" e o de verdade
         var request = new TransactionRequest("Mercado", BigDecimal.TEN, Category.GROCERIES, LocalDate.now().plusDays(1));
 
         assertThatThrownBy(() -> service.create(USER_ID, request))
@@ -141,13 +163,13 @@ class TransactionServiceTest {
     }
 
     @Test
-    void should_useCurrentMonth_when_summaryHasNoDates() {
-        var today = LocalDate.now();
-        when(transactionRepository.sumByCategoryBetween(USER_ID, today.withDayOfMonth(1), today)).thenReturn(List.of());
+    void should_useCurrentMonthInBrazilTime_when_summaryHasNoDates() {
+        when(transactionRepository.sumByCategoryBetween(USER_ID, LocalDate.of(2026, 9, 1), TODAY)).thenReturn(List.of());
 
         var summary = service.summary(USER_ID, null, null);
 
-        assertThat(summary.start()).isEqualTo(today.withDayOfMonth(1));
+        assertThat(summary.start()).isEqualTo(LocalDate.of(2026, 9, 1));
+        assertThat(summary.end()).isEqualTo(TODAY);
         assertThat(summary.total()).isEqualByComparingTo("0");
     }
 
