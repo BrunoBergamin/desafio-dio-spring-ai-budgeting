@@ -190,9 +190,8 @@ O botão do microfone usa `MediaRecorder` e grava em `webm/opus`, formato que o 
 
 ![Swagger UI com todos os endpoints](docs/images/swagger-overview.png)
 
-Os dois áudios estão em [`docs/audio`](docs/audio): me apresentando (ela entendeu que não havia gasto e não inventou nada) e perguntando o total do mês (ela buscou no banco em vez de chutar).
+O áudio está em [`docs/audio`](docs/audio): perguntando o total do mês, com a Lumi buscando no banco em vez de chutar.
 
-![Áudio de apresentação](docs/images/voz-apresentacao.png)
 ![Pergunta sobre o total do mês](docs/images/voz-consulta.png)
 
 </details>
