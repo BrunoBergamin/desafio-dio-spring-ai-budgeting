@@ -70,13 +70,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Nome da imagem em minusculas
+        id: imagem
+        # O GHCR exige o nome todo em minusculas e o usuario do GitHub tem maiusculas,
+        # entao github.repository nao serve direto como tag
+        run: echo "nome=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
           # Em pull request so compila (valida o Dockerfile); na main publica
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ${{ steps.imagem.outputs.nome }}:latest
+            ${{ steps.imagem.outputs.nome }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
